@@ -1,0 +1,4 @@
+			Type		DocumentNo		Reference		Pstng Date		Doc. Date	Rep. Date		Document Header Text		Customer		Business PartnerName		Name 2	Street	City	PostalCode	G/L	ISO	Tax Number 3	VAT Registration No.	Trs	Tx	Description	Rate	           Gross amount	        Tax base amount	 Output Tax Pay.	Tax acct
+			RV		8100000015		1000000010		01.04.2015		01.04.2015	01.04.2015				50131535								70700000				MWS	A2	Output tax 8%	  8,000	-354,00	-327,78	-26,22	44270000
+			RV		8100000015		1000000010		01.04.2015		01.04.2015	01.04.2015				50131535								70700000				MWS	A2	Output tax 8%	  8,000	-354,00	-327,78	-26,22	44270000
+			RV		8100000089		1000000085		01.04.2015		01.04.2015	01.04.2015				51577505								70700000				MWS	A8	Output tax 23%	 23,000	-269,00	-218,70	-50,30	44270000
