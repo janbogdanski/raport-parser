@@ -6,7 +6,9 @@
 from collections import defaultdict
 from pprint import pprint
 import re
+import csv
 
+eps = 0.000001
 
 
 class Record:
@@ -18,31 +20,58 @@ class Record:
     gross = ''
     net = ''
     taxVal = ''
+    STATUS_OK = 'OK'
+    STATUS_BAD = 'BAD'
 
     # def __eq__(self, other):
     #     print self.
     @staticmethod
     def toFloat(num):
-        return float(num.replace('.','').replace(',','.').replace(' ',''))
+        return round(float(num.replace('.','').replace(',','.').replace(' ','')),2)
 
     @staticmethod
     def equalRecords(receipt1, receipt2):
         passed = 0
-        print type(receipt1)
-        exit()
-        if len(receipt1) != len(receipt2):
-            return False
-        for record1 in receipt1:
-            for record2 in receipt2:
-                if abs(record1.gross - record2.gross) == 0:
-                    passed += 1
+        receipt1.sort()
+        receipt2.sort()
+
+        absReceipt1 = map(abs, receipt1)
+        absReceipt2 = map(abs, receipt2)
+        absSumDiff  = sum(absReceipt1) - sum(absReceipt2)
+        # print len(receipt1) == len(receipt2)
+
+        #sap moze miec rekordy ujemne (odpowiadajace sprzedazy na rachunku)
+        #i dodatni, bedace korektą
+
+        #sprawdzenie czy dlugosc list (liczba produktow) oraz ich suma jest rowna
+        if (len(receipt1) == len(receipt2)) and (absSumDiff < eps ):
+            #100% equal
+            # print(receipt1, receipt2)
+            # exit()
+            return (True, 'zgodna liczba produktow i suma ich cen w obu raportach')
+
+        #czy absolutne sumy sa rowne
+        if ((abs(sum(receipt1)) - abs(sum(receipt2))) < eps):
+            # print receipt1, receipt2, (abs(sum(receipt1)) - abs(sum(receipt2))) < eps
+            #rozna ilosc elementow, ale suma rowna - np. korekty
+            return (True, 'rozna liczba produktow, zgodna suma cen w obu raportach')
+        else:
+            return (False, 'rozne dane w obu raportach')
+
+        # for record1 in receipt1:
+        #     for record2 in receipt2:
+        #         print 1
+
+                # if abs(record1['gross'] - record2['gross']) == 0:
+                #     print 1
                     # pprint(vars(record1))
                     # pprint(vars(record2))
-        exit()
-        if len(receipt1) == passed:
-            return True
-        else:
-            return False
+        # exit()
+        # exit()
+        # if len(receipt1) == passed:
+        #     return True
+        # else:
+        #     return False
 
 
 
@@ -87,6 +116,7 @@ def read_printer_raport():
     blocksRead = rejestr.split(PrinterRecord.RECEIPT_DELIMITER)
     blocks = []
     printer = defaultdict(list)
+    ret = defaultdict(list)
 
 
     for block in blocksRead:
@@ -139,9 +169,15 @@ def read_printer_raport():
         compare = []
         p = []
         for price in prices:
+            rec = {}
+            rec['gross'] = price
+            # rec['refNum'] = refNum
+
             record = PrinterRecord()
             record.gross = price
             record.refNum = refNum
+
+
             #record.sum = sum
 
             compareSum += price
@@ -149,6 +185,8 @@ def read_printer_raport():
             p.append(price)
 
             printer[refNum].append(record)
+            ret[refNum].append(price)
+
 
 
         # if abs(round(compareSum,2) - sum) > 0:
@@ -158,7 +196,8 @@ def read_printer_raport():
             # print p
 
             #pprint(vars(record))
-    return printer
+    # return printer
+    return ret
 
 
 def read_sap_raport():
@@ -167,6 +206,7 @@ def read_sap_raport():
     rejestr = f.read()
     lines = rejestr.splitlines()[firstLine:]
     sap = defaultdict(list)
+    ret = defaultdict(list)
     for line in iter(lines):
         try:
             lineValues = line.split("\t")
@@ -178,7 +218,8 @@ def read_sap_raport():
             # print lineValues
             record = SapRecord()
             refNum = record.refNum = str(lineValues[SapRecord.POS_REF_NO].strip())
-            record.gross = abs(record.toFloat(lineValues[SapRecord.POS_GROSS].strip()))
+            # gross = record.gross = abs(record.toFloat(lineValues[SapRecord.POS_GROSS].strip()))
+            gross = record.gross = record.toFloat(lineValues[SapRecord.POS_GROSS].strip())
 
             #record.type = lineValues[SapRecord.POS_TYPE].strip()
             #record.docNo =  str(lineValues[SapRecord.POS_DOC_NO].strip())
@@ -188,6 +229,10 @@ def read_sap_raport():
 
             # print(refNum)
             sap[refNum].append(record)
+            rec = {}
+            # rec['refNum'] = record.refNum
+            rec['gross'] = gross
+            ret[refNum].append(gross)
 
             # pprint (vars(record))
         except ValueError as detail:
@@ -196,15 +241,21 @@ def read_sap_raport():
         except IndexError as detail:
             print detail
             print line
-    return sap
+    # return sap
+    return ret
 
 def compare_reports(report1, report2):
+    out = {}
     r1_keys = set(report1.keys())
     r2_keys = set(report2.keys())
     both = r1_keys.intersection(r2_keys)
+    print  both
+
+
     only_r1 = r1_keys - r2_keys
     only_r2 = r2_keys - r1_keys
-    #modified = {o : (report1[o], report2[o]) for o in intersect_keys if report1[o] != report2[o]}
+    # modified = {o : (report1[o], report2[o]) for o in both if cmp(report1[o], report2[o])}
+    # print(modified)
     #same = set(o for o in intersect_keys if report1[o] == report2[o])
     ok = 0
     bad = 0
@@ -212,17 +263,32 @@ def compare_reports(report1, report2):
 
     #equal = [o for o in both for r1 in report1[o] for r2 in report2[o] if abs(r1.gross -  r2.gross) == 0]
 
-    for refNum in both:
+    for refNum in only_r1:
+        output.writerow((refNum, Record.STATUS_BAD, 'tylko w r1', report1[refNum] ))
+    for refNum in only_r2:
+        output.writerow((refNum, Record.STATUS_BAD, 'tylko w r2', report2[refNum]))
 
-        eq = Record.equalRecords(report1[refNum], report2[refNum])
+    for refNum in both:
+        # if refNum != '1000003483':
+        #     continue
+        # print(refNum)
+        eq, msg = Record.equalRecords(report1[refNum], report2[refNum])
+        print(msg)
         if eq:
+            output.writerow((refNum, Record.STATUS_OK, msg, (report1[refNum], report2[refNum])))
             ok += 1
+            # print report1[refNum], report2[refNum]
+
             #print refNum
         else:
+            output.writerow((refNum, Record.STATUS_BAD , msg, (report1[refNum], report2[refNum])))
+            # print(refNum)
+            # print(cmp(report1[refNum], report2[refNum]))
+            # print report1[refNum], report2[refNum]
             bad += 1
         #exit()
-    pprint(equal)
-    print len(both), len(equal), ok, bad
+    # pprint(equal)
+    # print len(both), len(equal), ok, bad
 
     #print equal
 
@@ -239,13 +305,21 @@ def compare_reports(report1, report2):
     pprint (len(only_r1))
     #pprint (only_r2)
     #pprint (same)
-
-
-
+f = open('output.txt', 'wt')
+output = csv.writer(f)
 sap = read_sap_raport()
 printer = read_printer_raport()
-print len(sap)
-print len(printer)
+
+print sap
+print printer
+
+test1 = sap['1000003334']
+test2 = printer['1000003334']
+pprint((test1, test2))
+print cmp(test1,test2)
+
+
+
 compare_reports(printer, sap)
 
 exit()
