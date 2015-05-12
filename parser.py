@@ -7,6 +7,8 @@ from collections import defaultdict
 from pprint import pprint
 import re
 import csv
+import sys
+import argparse
 
 eps = 0.000001
 
@@ -111,7 +113,7 @@ class PrinterRecord (Record):
 
 def read_printer_raport():
     uniqe = 0
-    f = open("printer.txt")
+    f = open(args.printer)
     rejestr = f.read()
     blocksRead = rejestr.split(PrinterRecord.RECEIPT_DELIMITER)
     blocks = []
@@ -202,7 +204,7 @@ def read_printer_raport():
 
 def read_sap_raport():
     firstLine = 10
-    f = open("rejest_VAT.txt")
+    f = open(args.sap)
     rejestr = f.read()
     lines = rejestr.splitlines()[firstLine:]
     sap = defaultdict(list)
@@ -244,7 +246,10 @@ def read_sap_raport():
     # return sap
     return ret
 
-def compare_reports(report1, report2):
+def compare_write_reports(report1, report2):
+    f = open(args.out, 'wt')
+    output = csv.writer(f)
+
     out = {}
     r1_keys = set(report1.keys())
     r2_keys = set(report2.keys())
@@ -305,27 +310,37 @@ def compare_reports(report1, report2):
     pprint (len(only_r1))
     #pprint (only_r2)
     #pprint (same)
-f = open('output.txt', 'wt')
-output = csv.writer(f)
-sap = read_sap_raport()
-printer = read_printer_raport()
-
-print sap
-print printer
-
-test1 = sap['1000003334']
-test2 = printer['1000003334']
-pprint((test1, test2))
-print cmp(test1,test2)
+def main():
 
 
+    sap = read_sap_raport()
+    printer = read_printer_raport()
 
-compare_reports(printer, sap)
+    print sap
+    print printer
 
-exit()
-for item in sap:
-    for i in sap[item]:
-        print("%s %s" % (i.refNum, '') )
-        pprint (vars(i))
+    test1 = sap['1000003334']
+    test2 = printer['1000003334']
+    pprint((test1, test2))
+    print cmp(test1,test2)
+
+    compare_write_reports(printer, sap)
+
+    exit()
 
 
+if __name__ == "__main__":
+
+
+    parser = argparse.ArgumentParser(description="Parser raportow z drukarki fiskalnej i systemu SAP."
+                                                 " Sprawdza spojnosc danych miedzy tymi raportami, podsumowanie zapisane w csv")
+    parser.add_argument('-s', '--sap', default="rejest_VAT.txt", help="nazwa pliku z raportem z systemu SAP")
+    parser.add_argument('-p', '--printer', default="printer.txt", help="nazwa pliku z raportem z drukarki fiskalnej")
+    parser.add_argument('-o', '--out', default="output.txt", help="naza wyjsciowego csv", )
+    args = parser.parse_args()
+    print(args)
+    print(args.sap)
+    print(args.printer)
+    print(args.out)
+
+    main()
