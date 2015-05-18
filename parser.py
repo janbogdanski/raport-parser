@@ -1,8 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-#### todo
-#check files encodings
+# ### todo
+# check files encodings
+# zawezanie dla podanych dat - w zrzutach moga byc dane z szerszych okresow
 from collections import defaultdict
 from pprint import pprint
 import re
@@ -28,37 +29,36 @@ class Record:
     # def __eq__(self, other):
     #     print self.
     @staticmethod
-    def toFloat(num):
-        return round(float(num.replace('.','').replace(',','.').replace(' ','')),2)
+    def to_float(num):
+        return round(float(num.replace('.', '').replace(',', '.').replace(' ', '')), 2)
 
     @staticmethod
-    def equalRecords(receipt1, receipt2):
-        passed = 0
+    def equal_records(receipt1, receipt2):
         receipt1.sort()
         receipt2.sort()
 
-        absReceipt1 = map(abs, receipt1)
-        absReceipt2 = map(abs, receipt2)
-        absSumDiff  = sum(absReceipt1) - sum(absReceipt2)
+        abs_receipt1 = map(abs, receipt1)
+        abs_receipt2 = map(abs, receipt2)
+        abs_sum_diff = sum(abs_receipt1) - sum(abs_receipt2)
         # print len(receipt1) == len(receipt2)
 
-        #sap moze miec rekordy ujemne (odpowiadajace sprzedazy na rachunku)
-        #i dodatni, bedace korektą
+        # sap moze miec rekordy ujemne (odpowiadajace sprzedazy na rachunku)
+        # i dodatni, bedace korektą
 
-        #sprawdzenie czy dlugosc list (liczba produktow) oraz ich suma jest rowna
-        if (len(receipt1) == len(receipt2)) and (absSumDiff < eps ):
-            #100% equal
+        # sprawdzenie czy dlugosc list (liczba produktow) oraz ich suma jest rowna
+        if (len(receipt1) == len(receipt2)) and (abs_sum_diff < eps ):
+            # 100% equal
             # print(receipt1, receipt2)
             # exit()
-            return (True, 'zgodna liczba produktow i suma ich cen w obu raportach')
+            return True, 'zgodna liczba produktow i suma ich cen w obu raportach'
 
-        #czy absolutne sumy sa rowne
-        if ((abs(sum(receipt1)) - abs(sum(receipt2))) < eps):
+        # czy absolutne sumy sa rowne
+        if (abs(sum(receipt1)) - abs(sum(receipt2))) < eps:
             # print receipt1, receipt2, (abs(sum(receipt1)) - abs(sum(receipt2))) < eps
             #rozna ilosc elementow, ale suma rowna - np. korekty
-            return (True, 'rozna liczba produktow, zgodna suma cen w obu raportach')
+            return True, 'rozna liczba produktow, zgodna suma cen w obu raportach'
         else:
-            return (False, 'rozne dane w obu raportach')
+            return False, 'rozne dane w obu raportach'
 
         # for record1 in receipt1:
         #     for record2 in receipt2:
@@ -92,14 +92,14 @@ class SapRecord (Record):
     docNo = ''
 
 class PrinterRecord (Record):
-    #todo czy jest w kazdym raporcie z drukarki??
-    #oddziela naglowek drukarki
+    # todo czy jest w kazdym raporcie z drukarki??
+    # oddziela naglowek drukarki
     HEADER_DELIMITER = "----------------------------------------"
 
-    #oddziela kolejne rachunki
+    # oddziela kolejne rachunki
     RECEIPT_DELIMITER = "****************************************"
 
-    #na rachunku oddziela czesc z produktami od czesci z podsumowaniem
+    # na rachunku oddziela czesc z produktami od czesci z podsumowaniem
     PRODUCTS_SUMMARY_DELIMITER = "- - - - - - - - - - - - - - - - - - - - "
     RECEIPTS_EXCLUDED = ('A N U L O W A N Y', 'B Ł Ą D   I N T E R F E J S U', 'R A P O R T   D O B O W Y')
 
@@ -107,38 +107,34 @@ class PrinterRecord (Record):
     RECEIPT_REF_NUM_ROW = "Nr sys."
     RECEIPT_REF_NUM_PREFIX = "DNPL"
 
-    #PRICE_PATTERN = "(\d+,\d+)([A-Z]{1}|[A-Z]{3})$"
+    # PRICE_PATTERN = "(\d+,\d+)([A-Z]{1}|[A-Z]{3})$"
 
     sum = ''
 
-def read_printer_raport():
+def read_printer_report():
     uniqe = 0
     f = open(args.printer)
     rejestr = f.read()
-    blocksRead = rejestr.split(PrinterRecord.RECEIPT_DELIMITER)
+    blocks_read = rejestr.split(PrinterRecord.RECEIPT_DELIMITER)
     blocks = []
     printer = defaultdict(list)
     ret = defaultdict(list)
 
-
-    for block in blocksRead:
-        if(not len(block)):
+    for block in blocks_read:
+        if not len(block):
             continue
 
-
-        #for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED):
+        # for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED):
         #    if str(text) not in block:
         #        print text
         #        blocks.append(block)
 
-
-        #validateBlock =(text for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED) if str(text) not in block)
-        invalidBlock = [text for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED) if str(text) in block]
-        if (not any(invalidBlock)):
+        # validateBlock =(text for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED) if str(text) not in block)
+        invalid_block = [text for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED) if str(text) in block]
+        if not any(invalid_block):
             blocks.append(block)
 
-
-    #blocks contain valid receipts
+    # blocks contain valid receipts
     for receipt in blocks:
 
         prices = []
@@ -149,25 +145,23 @@ def read_printer_raport():
             print detail
 
         for line in products.splitlines():
-            #print line
+            # print line
             search = re.search(r"(\d+,\d+)([A-Z]{1}|[A-Z]{3})$", line, re.I)
             if search:
 
                 price = float(search.group(1).strip().replace(' ', '').replace(',', '.'))
                 prices.append(price)
 
-
-
         for line in summary.splitlines():
 
             if PrinterRecord.RECEIPT_SUM_ROW in line:
                 sum = float(line.replace(PrinterRecord.RECEIPT_SUM_ROW, '').strip().replace(' ', '').replace(',', '.'))
 
-
             if PrinterRecord.RECEIPT_REF_NUM_ROW in line:
-                 refNum =  str(line.replace(PrinterRecord.RECEIPT_REF_NUM_ROW, '').replace(PrinterRecord.RECEIPT_REF_NUM_PREFIX, '').strip().replace(' ', ''))
-        #print prices
-        compareSum = 0
+                 refNum = str(line.replace(PrinterRecord.RECEIPT_REF_NUM_ROW, '')
+                              .replace(PrinterRecord.RECEIPT_REF_NUM_PREFIX, '').strip().replace(' ', ''))
+        # print prices
+        compare_sum = 0
         compare = []
         p = []
         for price in prices:
@@ -179,17 +173,14 @@ def read_printer_raport():
             record.gross = price
             record.refNum = refNum
 
+            # record.sum = sum
 
-            #record.sum = sum
-
-            compareSum += price
-            compare.append(compareSum)
+            compare_sum += price
+            compare.append(compare_sum)
             p.append(price)
 
             printer[refNum].append(record)
             ret[refNum].append(price)
-
-
 
         # if abs(round(compareSum,2) - sum) > 0:
             # print [round(compareSum,2), abs(round(compareSum,2) - sum)]
@@ -197,37 +188,37 @@ def read_printer_raport():
             # print compare
             # print p
 
-            #pprint(vars(record))
+            # pprint(vars(record))
     # return printer
     return ret
 
 
-def read_sap_raport():
-    firstLine = 10
+def read_sap_report():
+    first_line = 10
     f = open(args.sap)
     rejestr = f.read()
-    lines = rejestr.splitlines()[firstLine:]
+    lines = rejestr.splitlines()[first_line:]
     sap = defaultdict(list)
     ret = defaultdict(list)
     for line in iter(lines):
         try:
-            lineValues = line.split("\t")
-            typeFound = lineValues[SapRecord.POS_TYPE].strip()
+            line_values = line.split("\t")
+            typeFound = line_values[SapRecord.POS_TYPE].strip()
             if typeFound != SapRecord.TYPE_EXPECTED:
-                #invalid type
+                # invalid type
                 continue
 
             # print lineValues
             record = SapRecord()
-            refNum = record.refNum = str(lineValues[SapRecord.POS_REF_NO].strip())
-            # gross = record.gross = abs(record.toFloat(lineValues[SapRecord.POS_GROSS].strip()))
-            gross = record.gross = record.toFloat(lineValues[SapRecord.POS_GROSS].strip())
+            refNum = record.refNum = str(line_values[SapRecord.POS_REF_NO].strip())
+            # gross = record.gross = abs(record.to_float(lineValues[SapRecord.POS_GROSS].strip()))
+            gross = record.gross = record.to_float(line_values[SapRecord.POS_GROSS].strip())
 
-            #record.type = lineValues[SapRecord.POS_TYPE].strip()
-            #record.docNo =  str(lineValues[SapRecord.POS_DOC_NO].strip())
-            #record.taxRate = abs(record.toFloat(lineValues[SapRecord.POS_TAX_RATE].strip()))
-            #record.net = abs(record.toFloat(lineValues[SapRecord.POS_NET].strip()))
-            #record.taxVal = abs(record.toFloat(lineValues[SapRecord.POS_TAX_VAL].strip()))
+            # record.type = lineValues[SapRecord.POS_TYPE].strip()
+            # record.docNo =  str(lineValues[SapRecord.POS_DOC_NO].strip())
+            # record.taxRate = abs(record.to_float(lineValues[SapRecord.POS_TAX_RATE].strip()))
+            # record.net = abs(record.to_float(lineValues[SapRecord.POS_NET].strip()))
+            # record.taxVal = abs(record.to_float(lineValues[SapRecord.POS_TAX_VAL].strip()))
 
             # print(refNum)
             sap[refNum].append(record)
@@ -256,17 +247,16 @@ def compare_write_reports(report1, report2):
     both = r1_keys.intersection(r2_keys)
     print  both
 
-
     only_r1 = r1_keys - r2_keys
     only_r2 = r2_keys - r1_keys
     # modified = {o : (report1[o], report2[o]) for o in both if cmp(report1[o], report2[o])}
     # print(modified)
-    #same = set(o for o in intersect_keys if report1[o] == report2[o])
+    # same = set(o for o in intersect_keys if report1[o] == report2[o])
     ok = 0
     bad = 0
-    #parse records, where ids are in both dicts
+    # parse records, where ids are in both dicts
 
-    #equal = [o for o in both for r1 in report1[o] for r2 in report2[o] if abs(r1.gross -  r2.gross) == 0]
+    # equal = [o for o in both for r1 in report1[o] for r2 in report2[o] if abs(r1.gross -  r2.gross) == 0]
 
     for refNum in only_r1:
         output.writerow((refNum, Record.STATUS_BAD, 'tylko w r1', report1[refNum] ))
@@ -277,44 +267,43 @@ def compare_write_reports(report1, report2):
         # if refNum != '1000003483':
         #     continue
         # print(refNum)
-        eq, msg = Record.equalRecords(report1[refNum], report2[refNum])
+        eq, msg = Record.equal_records(report1[refNum], report2[refNum])
         print(msg)
         if eq:
             output.writerow((refNum, Record.STATUS_OK, msg, (report1[refNum], report2[refNum])))
             ok += 1
             # print report1[refNum], report2[refNum]
 
-            #print refNum
+            # print refNum
         else:
             output.writerow((refNum, Record.STATUS_BAD , msg, (report1[refNum], report2[refNum])))
             # print(refNum)
             # print(cmp(report1[refNum], report2[refNum]))
             # print report1[refNum], report2[refNum]
             bad += 1
-        #exit()
+        # exit()
     # pprint(equal)
     # print len(both), len(equal), ok, bad
 
-    #print equal
+    # print equal
 
-    #for refNum in only_r1:
+    # for refNum in only_r1:
         #print None
 
-    #for refNum in only_r1:
-     #   print refNum
+    # for refNum in only_r1:
+     # print refNum
 
-    #parse record which are
-    #for item in raport1:
+    # parse record which are
+    # for item in report1:
     pprint (len(both))
-    #pprint (only_r1)
+    # pprint (only_r1)
     pprint (len(only_r1))
-    #pprint (only_r2)
-    #pprint (same)
+    # pprint (only_r2)
+    # pprint (same)
 def main():
 
-
-    sap = read_sap_raport()
-    printer = read_printer_raport()
+    sap = read_sap_report()
+    printer = read_printer_report()
 
     print sap
     print printer
@@ -331,11 +320,10 @@ def main():
 
 if __name__ == "__main__":
 
-
     parser = argparse.ArgumentParser(description="Parser raportow z drukarki fiskalnej i systemu SAP."
                                                  " Sprawdza spojnosc danych miedzy tymi raportami, podsumowanie zapisane w csv")
     parser.add_argument('-s', '--sap', default="rejest_VAT.txt", help="nazwa pliku z raportem z systemu SAP")
-    parser.add_argument('-p', '--printer', default="printer.txt", help="nazwa pliku z raportem z drukarki fiskalnej")
+    parser.add_argument('-p', '--printer', default="printer.txt", help="nazwa pliku z raportem z drukarki fiskalnej") # nargs="+"
     parser.add_argument('-o', '--out', default="output.txt", help="naza wyjsciowego csv", )
     args = parser.parse_args()
     print(args)
