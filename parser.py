@@ -19,20 +19,9 @@ class Record:
     date1 = ''
     date2 = ''
     date3 = ''
-    taxRate = ''
-    gross = ''
-    net = ''
-    taxVal = ''
 
-    # suma sprzedazy na rachunku po typie podatku
-    sale_sum_by_tax = {}
 
-    # suma podatku od sprzedazy, po typie podatku
-    tax_sum_by_tax = {}
 
-    # calkowita suma podatku na rachunku
-    total_tax_sum = 0
-    gross_sum = 0
     STATUS_OK = 'OK'
     STATUS_BAD = 'BAD'
 
@@ -97,9 +86,13 @@ class SapRecord (Record):
     POS_GROSS = 32
     POS_NET = 33
     POS_TAX_VAL = 34
-    TYPE_EXPECTED = "RV"
+    TYPE_EXPECTED = ("R1","RV")
     type = ''
     docNo = ''
+    taxRate = ''
+    gross = ''
+    net = ''
+    taxVal = ''
 
 class PrinterRecord (Record):
     # todo czy jest w kazdym raporcie z drukarki??
@@ -123,6 +116,16 @@ class PrinterRecord (Record):
     # PRICE_PATTERN = "(\d+,\d+)([A-Z]{1}|[A-Z]{3})$"
 
     sum = ''
+
+        # suma sprzedazy na rachunku po typie podatku
+    sale_sum_by_tax = {}
+
+    # suma podatku od sprzedazy, po typie podatku
+    tax_sum_by_tax = {}
+
+    # calkowita suma podatku na rachunku
+    total_tax_sum = 0
+    gross_sum = 0
 
 def read_printer_report():
     uniqe = 0
@@ -219,6 +222,55 @@ def read_printer_report():
     # return printer
     return ret
 
+def read_sap_report2():
+    first_line = 7
+    with open(args.sap, 'r') as f:
+        rejestr = csv.reader(f, delimiter="\t")
+        a = [(next(rejestr)) for i in range(0, first_line)]
+
+        sap = defaultdict(list)
+        ret = defaultdict(list)
+        test = defaultdict(list)
+        for line in rejestr:
+            try:
+
+                type_found = line[SapRecord.POS_TYPE].strip()
+                if type_found in SapRecord.TYPE_EXPECTED:
+                    # invalid type
+                    # continue
+                    # print lineValues
+                    record = SapRecord()
+                    refNum = record.refNum = str(line[SapRecord.POS_REF_NO].strip())
+                    # gross = record.gross = abs(record.to_float(lineValues[SapRecord.POS_GROSS].strip()))
+                    gross = record.gross = record.to_float(line[SapRecord.POS_GROSS].strip())
+                    record.taxRate = SapRecord.to_float(line[SapRecord.POS_TAX_RATE].strip())
+                    record.net = SapRecord.to_float(line[SapRecord.POS_NET].strip())
+                    record.taxVal = SapRecord.to_float(line[SapRecord.POS_TAX_VAL].strip())
+
+                    record.type = line[SapRecord.POS_TYPE].strip()
+                    # record.docNo =  str(lineValues[SapRecord.POS_DOC_NO].strip())
+                    # record.taxRate = abs(record.to_float(lineValues[SapRecord.POS_TAX_RATE].strip()))
+                    # record.net = abs(record.to_float(lineValues[SapRecord.POS_NET].strip()))
+                    # record.taxVal = abs(record.to_float(lineValues[SapRecord.POS_TAX_VAL].strip()))
+
+                    # print(refNum)
+                    sap[refNum].append(record)
+                    rec = {}
+                    # rec['refNum'] = record.refNum
+                    rec['gross'] = gross
+                    ret[refNum].append(gross)
+                    test[refNum].append(record)
+
+                    # pprint (vars(record))
+            except ValueError as detail:
+                print detail
+                print line
+            except IndexError as detail:
+                print detail
+                print line
+    # return sap
+
+    return ret
 
 def read_sap_report():
     first_line = 10
@@ -329,7 +381,7 @@ def compare_write_reports(report1, report2):
     # pprint (same)
 def main():
 
-    sap = read_sap_report()
+    sap = read_sap_report2()
     printer = read_printer_report()
 
     print sap
