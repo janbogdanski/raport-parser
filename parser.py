@@ -23,6 +23,16 @@ class Record:
     gross = ''
     net = ''
     taxVal = ''
+
+    # suma sprzedazy na rachunku po typie podatku
+    sale_sum_by_tax = {}
+
+    # suma podatku od sprzedazy, po typie podatku
+    tax_sum_by_tax = {}
+
+    # calkowita suma podatku na rachunku
+    total_tax_sum = 0
+    gross_sum = 0
     STATUS_OK = 'OK'
     STATUS_BAD = 'BAD'
 
@@ -103,6 +113,9 @@ class PrinterRecord (Record):
     PRODUCTS_SUMMARY_DELIMITER = "- - - - - - - - - - - - - - - - - - - - "
     RECEIPTS_EXCLUDED = ('A N U L O W A N Y', 'B Ł Ą D   I N T E R F E J S U', 'R A P O R T   D O B O W Y')
 
+    RECEIPT_SALE_SUM_BY_TAX_REGEX = "^SPRZEDAŻ\s+OPODATK.\s+([A-Z]{1})\s+(\d+,\d+)$"
+    RECEIPT_TAX_SUM_BY_TAX_REGEX = "^PTU\s+([A-Z]{1})\s+.*?(\d+,\d+)$"
+    RECEIPT_TOTAL_TAX_SUM_REGEX = "^SUMA\s+PTU.*?(\d+,\d+)$"
     RECEIPT_SUM_ROW = "S U M A   P L N"
     RECEIPT_REF_NUM_ROW = "Nr sys."
     RECEIPT_REF_NUM_PREFIX = "DNPL"
@@ -120,24 +133,22 @@ def read_printer_report():
     printer = defaultdict(list)
     ret = defaultdict(list)
 
+    # exclude receipt if contains any string of RECEIPTS_EXCLUDED
     for block in blocks_read:
         if not len(block):
             continue
 
-        # for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED):
-        #    if str(text) not in block:
-        #        print text
-        #        blocks.append(block)
-
-        # validateBlock =(text for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED) if str(text) not in block)
         invalid_block = [text for index, text in enumerate(PrinterRecord.RECEIPTS_EXCLUDED) if str(text) in block]
         if not any(invalid_block):
             blocks.append(block)
 
-    # blocks contain valid receipts
+    # 'blocks' contain valid receipts
     for receipt in blocks:
 
         prices = []
+        sale_sum_by_tax = {}
+        tax_sum_by_tax = {}
+        total_tax_sum = 0
         try:
 
             products, summary = receipt.split(PrinterRecord.PRODUCTS_SUMMARY_DELIMITER)
@@ -146,7 +157,10 @@ def read_printer_report():
 
         for line in products.splitlines():
             # print line
-            search = re.search(r"(\d+,\d+)([A-Z]{1}|[A-Z]{3})$", line, re.I)
+
+            # sprawdzenie czy na koncu linii jest cena np. 11,54A
+            # search = re.search(r"(\d+,\d+)([A-Z]{1}|[A-Z]{3})$", line, re.I) # 1 lub 3 znaki - w sumie 3 nie powinno byc
+            search = re.search(r"(\d+,\d+)([A-Z]{1})$", line, re.I)
             if search:
 
                 price = float(search.group(1).strip().replace(' ', '').replace(',', '.'))
@@ -154,30 +168,46 @@ def read_printer_report():
 
         for line in summary.splitlines():
 
-            if PrinterRecord.RECEIPT_SUM_ROW in line:
-                sum = float(line.replace(PrinterRecord.RECEIPT_SUM_ROW, '').strip().replace(' ', '').replace(',', '.'))
+            # suma sprzedazy po typie podatku
+            sum_tax_type = re.search(PrinterRecord.RECEIPT_SALE_SUM_BY_TAX_REGEX, line, re.I)
+            if sum_tax_type:
+                sale_sum_by_tax[sum_tax_type.group(1)] = float(sum_tax_type.group(2).strip().replace(' ', '').replace(',', '.'))
 
+            # suma podatku po typie podatku
+            tax_type_by_tax = re.search(PrinterRecord.RECEIPT_TAX_SUM_BY_TAX_REGEX, line, re.I)
+            if tax_type_by_tax:
+                tax_sum_by_tax[tax_type_by_tax.group(1)] = float(tax_type_by_tax.group(2).strip().replace(' ', '').replace(',', '.'))
+
+            # calkowita suma podatku+
+            tax_total = re.search(PrinterRecord.RECEIPT_TOTAL_TAX_SUM_REGEX, line, re.I)
+            if tax_total:
+                total_tax_sum = float(tax_total.group(1).strip().replace(' ', '').replace(',', '.'))
+
+            # suma rachunku z wiersza z suma
+            if PrinterRecord.RECEIPT_SUM_ROW in line:
+                gross_sum = float(line.replace(PrinterRecord.RECEIPT_SUM_ROW, '').strip().replace(' ', '').replace(',', '.'))
+
+            # numer rachunku powiazany z numerem z sap
             if PrinterRecord.RECEIPT_REF_NUM_ROW in line:
                  refNum = str(line.replace(PrinterRecord.RECEIPT_REF_NUM_ROW, '')
                               .replace(PrinterRecord.RECEIPT_REF_NUM_PREFIX, '').strip().replace(' ', ''))
         # print prices
         compare_sum = 0
         compare = []
-        p = []
+        # p = []
+        record = PrinterRecord()
+        record.refNum = refNum
+        record.sale_sum_by_tax = sale_sum_by_tax
+        record.tax_sum_by_tax = tax_sum_by_tax
+        record.prices = prices
+        record.gross_sum = gross_sum
+        record.total_tax_sum = total_tax_sum
         for price in prices:
-            rec = {}
-            rec['gross'] = price
-            # rec['refNum'] = refNum
 
-            record = PrinterRecord()
-            record.gross = price
-            record.refNum = refNum
 
-            # record.sum = sum
-
-            compare_sum += price
-            compare.append(compare_sum)
-            p.append(price)
+            # compare_sum += price
+            # compare.append(compare_sum)
+            # p.append(price)
 
             printer[refNum].append(record)
             ret[refNum].append(price)
@@ -185,10 +215,7 @@ def read_printer_report():
         # if abs(round(compareSum,2) - sum) > 0:
             # print [round(compareSum,2), abs(round(compareSum,2) - sum)]
             # print [compareSum - sum, compareSum, sum]
-            # print compare
-            # print p
 
-            # pprint(vars(record))
     # return printer
     return ret
 
