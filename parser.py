@@ -14,16 +14,41 @@ import argparse
 eps = 0.000001
 
 
-class Record:
+class Record (object):
     refNum = ''
     date1 = ''
     date2 = ''
     date3 = ''
 
+    # suma sprzedazy na rachunku po typie podatku
+    sale_sum_by_tax = {}
 
+    # suma podatku od sprzedazy, po typie podatku
+    tax_sum_by_tax = {}
+
+    # calkowita suma podatku na rachunku
+    total_tax_sum = 0
+    gross_sum = 0
+    gross_prices = []
 
     STATUS_OK = 'OK'
     STATUS_BAD = 'BAD'
+
+    # mapowanie stawek podatkowych, do unifikacji
+    # w sapie sa A1, A2, na drukarce A, B, C
+    tax_map = {
+        "A1": "D",  # 5%
+        "A2": "B",  # 8%
+        "A8": "A",  # 23%
+        "C0": "C",  # 0%
+        "MWS": "A"  # 23% dziwne
+    }
+    def __init__(self):
+        self.sale_sum_by_tax = {}
+        self.tax_sum_by_tax = {}
+        self.total_tax_sum = 0
+        self.gross_sum = 0
+        self.gross_prices = []
 
     # def __eq__(self, other):
     #     print self.
@@ -81,17 +106,19 @@ class Record:
 class SapRecord (Record):
     POS_TYPE = 3
     POS_DOC_NO = 5
-    POS_REF_NO = 7
-    POS_TAX_RATE = 31
-    POS_GROSS = 32
-    POS_NET = 33
-    POS_TAX_VAL = 34
-    TYPE_EXPECTED = ("R1","RV")
+    POS_REF_NO = 11
+    POS_TAX_SYMBOL = 39
+    POS_TAX_RATE = 40
+    POS_GROSS = 41
+    POS_NET = 42
+    POS_TAX_VAL = 43
+    TYPE_EXPECTED = ("RV",) # "R1"
+
     type = ''
     docNo = ''
     taxRate = ''
     gross = ''
-    net = ''
+    net = 0
     taxVal = ''
 
 class PrinterRecord (Record):
@@ -117,15 +144,7 @@ class PrinterRecord (Record):
 
     sum = ''
 
-        # suma sprzedazy na rachunku po typie podatku
-    sale_sum_by_tax = {}
 
-    # suma podatku od sprzedazy, po typie podatku
-    tax_sum_by_tax = {}
-
-    # calkowita suma podatku na rachunku
-    total_tax_sum = 0
-    gross_sum = 0
 
 def read_printer_report():
     uniqe = 0
@@ -202,7 +221,7 @@ def read_printer_report():
         record.refNum = refNum
         record.sale_sum_by_tax = sale_sum_by_tax
         record.tax_sum_by_tax = tax_sum_by_tax
-        record.prices = prices
+        record.gross_prices = prices
         record.gross_sum = gross_sum
         record.total_tax_sum = total_tax_sum
         for price in prices:
@@ -226,26 +245,46 @@ def read_sap_report2():
     first_line = 7
     with open(args.sap, 'r') as f:
         rejestr = csv.reader(f, delimiter="\t")
-        a = [(next(rejestr)) for i in range(0, first_line)]
+        [(next(rejestr)) for i in range(0, first_line)]
 
         sap = defaultdict(list)
         ret = defaultdict(list)
         test = defaultdict(list)
+        test2 = defaultdict(list)
         for line in rejestr:
             try:
 
                 type_found = line[SapRecord.POS_TYPE].strip()
                 if type_found in SapRecord.TYPE_EXPECTED:
+                    a = SapRecord()
+
                     # invalid type
+
                     # continue
                     # print lineValues
-                    record = SapRecord()
-                    refNum = record.refNum = str(line[SapRecord.POS_REF_NO].strip())
+                    refNum = str(line[SapRecord.POS_REF_NO].strip())
+                    if refNum in test2:
+                        record = test2[refNum]
+                        """
+                        @:type SapRecord
+                        """
+                        a = 'b'
+                    else:
+                        record = SapRecord()
+                        b = 'fg'
+
                     # gross = record.gross = abs(record.to_float(lineValues[SapRecord.POS_GROSS].strip()))
-                    gross = record.gross = record.to_float(line[SapRecord.POS_GROSS].strip())
-                    record.taxRate = SapRecord.to_float(line[SapRecord.POS_TAX_RATE].strip())
-                    record.net = SapRecord.to_float(line[SapRecord.POS_NET].strip())
-                    record.taxVal = SapRecord.to_float(line[SapRecord.POS_TAX_VAL].strip())
+                    # gross - wartosc brutto za dany przedmiot
+                    gross = SapRecord.to_float(line[SapRecord.POS_GROSS].strip())
+
+                    # stawka podatku, liczbowo
+                    taxRate = SapRecord.to_float(line[SapRecord.POS_TAX_RATE].strip())
+
+                    # net - wartosc netto za dany przedmiot
+                    net = SapRecord.to_float(line[SapRecord.POS_NET].strip())
+
+                    # taxVal - wartosc podatku za dany przedmiot
+                    taxVal =SapRecord.to_float(line[SapRecord.POS_TAX_VAL].strip())
 
                     record.type = line[SapRecord.POS_TYPE].strip()
                     # record.docNo =  str(lineValues[SapRecord.POS_DOC_NO].strip())
@@ -253,12 +292,32 @@ def read_sap_report2():
                     # record.net = abs(record.to_float(lineValues[SapRecord.POS_NET].strip()))
                     # record.taxVal = abs(record.to_float(lineValues[SapRecord.POS_TAX_VAL].strip()))
 
+                    # prices = []
+                    # sale_sum_by_tax = {}
+                    # tax_sum_by_tax = {}
+                    total_tax_sum = 0
+
+
+
+                    tax_symbol = line[SapRecord.POS_TAX_SYMBOL].strip()
+                    if tax_symbol in SapRecord.tax_map:
+                        tax_symbol = SapRecord.tax_map[tax_symbol]
+                    tax_symbol = SapRecord.tax_map.get(tax_symbol, tax_symbol)
+
+                    record.sale_sum_by_tax[tax_symbol] = record.sale_sum_by_tax.get(tax_symbol, 0) + gross
+                    record.tax_sum_by_tax[tax_symbol] = record.tax_sum_by_tax.get(tax_symbol, 0) + taxVal
+                    record.total_tax_sum += taxVal
+                    record.gross_prices.append(gross)
+                    record.gross_sum += gross
+                    record.net += net
+
                     # print(refNum)
                     sap[refNum].append(record)
                     rec = {}
                     # rec['refNum'] = record.refNum
                     rec['gross'] = gross
                     ret[refNum].append(gross)
+                    test2[refNum] = record
                     test[refNum].append(record)
 
                     # pprint (vars(record))
@@ -270,7 +329,7 @@ def read_sap_report2():
                 print line
     # return sap
 
-    return ret
+    return test2
 
 def read_sap_report():
     first_line = 10
