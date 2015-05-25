@@ -34,6 +34,12 @@ class Record (object):
     STATUS_OK = 'OK'
     STATUS_BAD = 'BAD'
 
+    MESSAGE_ALL_OK = "Zgodne wpisy co "
+    MESSAGE_TECHNICAL_CODE = "Technical code w zrzucie"
+    MESSAGE_DIFFERENT_TAX_SUM = "Różne kwoty podatku"
+    MESSAGE_ONLY_PRINTER = "Podatek tylko na drukarce"
+    MESSAGE_ONLY_SAP = "Podatek tylko wa SAP"
+
     # mapowanie stawek podatkowych, do unifikacji
     # w sapie sa A1, A2, na drukarce A, B, C
     tax_map = {
@@ -43,6 +49,7 @@ class Record (object):
         "C0": "C",  # 0%
         "MWS": "A"  # 23% dziwne
     }
+
     def __init__(self):
         self.sale_sum_by_tax = {}
         self.tax_sum_by_tax = {}
@@ -57,8 +64,73 @@ class Record (object):
         return round(float(num.replace('.', '').replace(',', '.').replace(' ', '')), 2)
 
     @staticmethod
-    def equal_records(receipt1, receipt2):
-        receipt1.sort()
+    def equal_records(printer, sap):
+        """
+        @type printer: Record
+        @type sap: Record
+        """
+
+        messages = []
+        # message = {"tax_symbol_err": None, "status": None}
+        printer_taxes = set(printer.tax_sum_by_tax.keys())
+        sap_taxes = set(sap.tax_sum_by_tax.keys())
+
+        taxes_in_both = printer_taxes.intersection(sap_taxes)
+        taxes_in_printer = printer_taxes - sap_taxes
+        taxes_in_sap = sap_taxes - printer_taxes
+
+        # czy jest ok? Gdy rowne dlugosci tablic z tax, i ich odpowiednie wartosci rowne
+        compare = [True if abs(abs(printer.tax_sum_by_tax[tax]) - abs(sap.tax_sum_by_tax[tax])) <= eps else False
+                   for tax in taxes_in_both if len(taxes_in_both) == len(sap_taxes)]
+        if len(compare) and all(compare):
+            messages.append({"tax_symbol_err": None, "status": Record.STATUS_OK,
+                             "message": Record.MESSAGE_ALL_OK})
+            # globalnie ok, mozna zrobic return
+            return messages
+
+        # technical code YA nie dyskwalifikuje - jesli suma podatkow jest ok, to ok
+        a = 's'
+        if SapRecord.TAX_TECHNICAL_CODE in taxes_in_sap\
+                and abs(abs(printer.total_tax_sum) - abs(sap.total_tax_sum)) > eps:
+            messages.append({"tax_symbol_err": None, "status": Record.STATUS_OK,
+                             "message": Record.MESSAGE_TECHNICAL_CODE})
+            # globalnie ok, mozna zrobic return
+            return messages
+
+        # sprawdzenie sum poszczegolnych wartosci podatkow
+        # return dopiero na koniec if'ow
+        if len(taxes_in_both):
+            for tax in taxes_in_both:
+                diff = abs(abs(printer.tax_sum_by_tax[tax]) - abs(sap.tax_sum_by_tax[tax]))
+                if diff > eps:
+                    messages.append({"tax_symbol_err": tax, "status": Record.STATUS_BAD,
+                                     "message": Record.MESSAGE_DIFFERENT_TAX_SUM})
+
+        if len(taxes_in_printer):
+            for tax in taxes_in_printer:
+                messages.append({"tax_symbol_err": tax, "status": Record.STATUS_BAD,
+                                 "message": Record.MESSAGE_ONLY_PRINTER})
+
+        if len(taxes_in_sap):
+            for tax in taxes_in_sap:
+                messages.append({"tax_symbol_err": tax, "status": Record.STATUS_BAD,
+                                 "message": Record.MESSAGE_ONLY_SAP})
+        len_prices = len(printer.gross_prices), len(sap.gross_prices)
+        gross_sums = (printer.gross_sum, sap.gross_sum, abs(printer.gross_sum) - abs(sap.gross_sum))
+        r = (len_prices, gross_sums, cmp(printer.sale_sum_by_tax, sap.sale_sum_by_tax))
+
+
+        if not len(messages):
+            a = 'g'
+        return messages
+
+
+        sum_gross = sum(sap.gross_prices)
+
+        # if len(printer.gross_prices) != len(sap.gross_prices):
+        #     a = 'n'
+        # return (1,1)
+        printer.sort()
         receipt2.sort()
 
         abs_receipt1 = map(abs, receipt1)
@@ -114,6 +186,7 @@ class SapRecord (Record):
     POS_TAX_VAL = 43
     TYPE_EXPECTED = ("RV",) # "R1"
 
+    TAX_TECHNICAL_CODE = "YA"
     type = ''
     docNo = ''
     taxRate = ''
@@ -188,6 +261,7 @@ def read_printer_report():
                 price = float(search.group(1).strip().replace(' ', '').replace(',', '.'))
                 prices.append(price)
 
+        # collect data from lines
         for line in summary.splitlines():
 
             # suma sprzedazy po typie podatku
@@ -224,6 +298,8 @@ def read_printer_report():
         record.gross_prices = prices
         record.gross_sum = gross_sum
         record.total_tax_sum = total_tax_sum
+        printer[refNum] = record
+
         for price in prices:
 
 
@@ -231,7 +307,6 @@ def read_printer_report():
             # compare.append(compare_sum)
             # p.append(price)
 
-            printer[refNum].append(record)
             ret[refNum].append(price)
 
         # if abs(round(compareSum,2) - sum) > 0:
@@ -239,7 +314,7 @@ def read_printer_report():
             # print [compareSum - sum, compareSum, sum]
 
     # return printer
-    return ret
+    return printer
 
 def read_sap_report2():
     first_line = 7
@@ -438,20 +513,101 @@ def compare_write_reports(report1, report2):
     pprint (len(only_r1))
     # pprint (only_r2)
     # pprint (same)
+
+def compare_write_reports2(printer, sap):
+    f = open(args.out, 'wt')
+    output = csv.writer(f)
+
+    out = {}
+    r1_keys = set(printer.keys())
+    r2_keys = set(sap.keys())
+    both = r1_keys.intersection(r2_keys)
+
+    only_r1 = r1_keys - r2_keys
+    only_r2 = r2_keys - r1_keys
+    # modified = {o : (printer[o], sap[o]) for o in both if cmp(printer[o], sap[o])}
+    # print(modified)
+    # same = set(o for o in intersect_keys if printer[o] == sap[o])
+    c = len(r1_keys), len(r2_keys), len(both)
+    ok = 0
+    bad = 0
+    # parse records, where ids are in both dicts
+
+    # equal = [o for o in both for r1 in printer[o] for r2 in sap[o] if abs(r1.gross -  r2.gross) == 0]
+
+    for refNum in only_r1:
+        output.writerow((refNum, Record.STATUS_BAD, 'tylko w r1', printer[refNum] ))
+    for refNum in only_r2:
+        output.writerow((refNum, Record.STATUS_BAD, 'tylko w r2', sap[refNum]))
+
+    for refNum in both:
+        # if refNum != '1000003483':
+        #     continue
+        # print(refNum)
+        messages = Record.equal_records(printer[refNum], sap[refNum])
+        if len(messages):
+            a = 'd'
+        else:
+            b = 'blad?'
+        msg = 'a'
+        eq = '1'
+        print(msg)
+        if eq:
+            output.writerow((refNum, Record.STATUS_OK, msg, (printer[refNum], sap[refNum])))
+            ok += 1
+            # print printer[refNum], sap[refNum]
+
+            # print refNum
+        else:
+            output.writerow((refNum, Record.STATUS_BAD , msg, (printer[refNum], sap[refNum])))
+            # print(refNum)
+            # print(cmp(printer[refNum], sap[refNum]))
+            # print printer[refNum], sap[refNum]
+            bad += 1
+        # exit()
+    # pprint(equal)
+    # print len(both), len(equal), ok, bad
+
+    # print equal
+
+    # for refNum in only_r1:
+        #print None
+
+    # for refNum in only_r1:
+     # print refNum
+
+    # parse record which are
+    # for item in report1:
+    pprint (len(both))
+    # pprint (only_r1)
+    pprint (len(only_r1))
+    # pprint (only_r2)
+    # pprint (same)
+
+def eq_records(printer, sap):
+    """
+
+    :type printer: PrinterRecord
+    :type sap: SapRecord
+    :return:
+    """
+
+    return
 def main():
 
     sap = read_sap_report2()
     printer = read_printer_report()
+    a = sap['1000000016']
 
-    print sap
-    print printer
+    # print sap
+    # print printer
 
     test1 = sap['1000003334']
     test2 = printer['1000003334']
     pprint((test1, test2))
-    print cmp(test1,test2)
+    print cmp(test1, test2)
 
-    compare_write_reports(printer, sap)
+    compare_write_reports2(printer, sap)
 
     exit()
 
