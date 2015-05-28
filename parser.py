@@ -41,6 +41,7 @@ class Record (object):
     MESSAGE_TAX_ONLY_SAP = "Podatek na rachunku tylko wa SAP"
     MESSAGE_ONLY_PRINTER = "Dokument o danym ID tylko na drukarce"
     MESSAGE_ONLY_SAP = "Dokument o danym ID tylko SAP"
+    MESSAGE_EQUAL_TAX_SUM = "Sumy podatkow na rachunkach sa zgodne"
 
     # mapowanie stawek podatkowych, do unifikacji
     # w sapie sa A1, A2, na drukarce A, B, C
@@ -77,7 +78,7 @@ class Record (object):
         """
 
         messages = []
-        # message = {"tax_symbol_err": None, "status": None}
+        # message = {"tax_symbol_err": None, "status": None, "message": 'str', 'comment': 'comment'}
         printer_taxes = set(printer.tax_sum_by_tax.keys())
         sap_taxes = set(sap.tax_sum_by_tax.keys())
 
@@ -89,38 +90,70 @@ class Record (object):
         compare = [True if abs(abs(printer.tax_sum_by_tax[tax]) - abs(sap.tax_sum_by_tax[tax])) <= eps else False
                    for tax in taxes_in_both if len(taxes_in_both) == len(sap_taxes)]
         if len(compare) and all(compare):
-            messages.append({"tax_symbol_err": None, "status": Record.STATUS_OK,
-                             "message": Record.MESSAGE_ALL_OK})
+            messages.append({
+                "tax_symbol_err": None,
+                "status": Record.STATUS_OK,
+                "message": Record.MESSAGE_ALL_OK,
+                "comment": ""
+            })
             # globalnie ok, mozna zrobic return
             return messages
 
-        # technical code YA nie dyskwalifikuje - jesli suma podatkow jest ok, to ok
-        a = 's'
+        # technical code YA nie dyskwalifikuje - jesli suma podatkow jest ok, to od razu return
         if SapRecord.TAX_TECHNICAL_CODE in taxes_in_sap\
                 and abs(abs(printer.total_tax_sum) - abs(sap.total_tax_sum)) < eps:
-            messages.append({"tax_symbol_err": None, "status": Record.STATUS_OK,
-                             "message": Record.MESSAGE_TECHNICAL_CODE})
+            messages.append({
+                "tax_symbol_err": None,
+                "status": Record.STATUS_OK,
+                "message": "",
+                "comment": Record.MESSAGE_TECHNICAL_CODE
+            })
             # globalnie ok, mozna zrobic return
             return messages
 
         # sprawdzenie sum poszczegolnych wartosci podatkow
         # return dopiero na koniec if'ow
+        comment = ""
+        if abs(abs(printer.total_tax_sum) - abs(sap.total_tax_sum)) <= eps:
+            comment = Record.MESSAGE_EQUAL_TAX_SUM
         if len(taxes_in_both):
             for tax in taxes_in_both:
                 diff = abs(abs(printer.tax_sum_by_tax[tax]) - abs(sap.tax_sum_by_tax[tax]))
                 if diff > eps:
-                    messages.append({"tax_symbol_err": tax, "status": Record.STATUS_BAD,
-                                     "message": Record.MESSAGE_DIFFERENT_TAX_SUM})
+                    messages.append({
+                        "tax_symbol_err": tax,
+                        "status": Record.STATUS_BAD,
+                        "message": Record.MESSAGE_DIFFERENT_TAX_SUM,
+                        "comment": comment
+
+                    })
 
         if len(taxes_in_printer):
             for tax in taxes_in_printer:
-                messages.append({"tax_symbol_err": tax, "status": Record.STATUS_BAD,
-                                 "message": Record.MESSAGE_TAX_ONLY_PRINTER})
+                messages.append({
+                    "tax_symbol_err": tax,
+                    "status": Record.STATUS_BAD,
+                    "message": Record.MESSAGE_TAX_ONLY_PRINTER,
+                    "comment": comment
+
+                })
 
         if len(taxes_in_sap):
             for tax in taxes_in_sap:
-                messages.append({"tax_symbol_err": tax, "status": Record.STATUS_BAD,
-                                 "message": Record.MESSAGE_TAX_ONLY_SAP})
+
+                # append message when in taxes is technical code
+                if SapRecord.TAX_TECHNICAL_CODE in taxes_in_sap:
+                    comment = Record.MESSAGE_TECHNICAL_CODE
+
+                # skip, when actual tax is technical code equal 0.0
+                if tax == SapRecord.TAX_TECHNICAL_CODE and abs(sap.tax_sum_by_tax[tax]) < eps:
+                    continue
+                messages.append({
+                    "tax_symbol_err": tax,
+                    "status": Record.STATUS_BAD,
+                    "message": Record.MESSAGE_TAX_ONLY_SAP,
+                    "comment": comment
+                })
         len_prices = len(printer.gross_prices), len(sap.gross_prices)
         gross_sums = (printer.gross_sum, sap.gross_sum, abs(printer.gross_sum) - abs(sap.gross_sum))
         r = (len_prices, gross_sums, cmp(printer.sale_sum_by_tax, sap.sale_sum_by_tax))
@@ -278,6 +311,7 @@ def read_printer_report():
             tax_type_by_tax = re.search(PrinterRecord.RECEIPT_TAX_SUM_BY_TAX_REGEX, line, re.I)
             if tax_type_by_tax:
                 a = Record.round(tax_type_by_tax.group(2).strip().replace(' ', '').replace(',', '.'))
+                tax_sum_by_tax[tax_type_by_tax.group(1)] = Record.round(tax_type_by_tax.group(2).strip().replace(' ', '').replace(',', '.'))
                 tax_sum_by_tax[tax_type_by_tax.group(1)] = Record.round(tax_type_by_tax.group(2).strip().replace(' ', '').replace(',', '.'))
 
             # calkowita suma podatku+
@@ -529,7 +563,7 @@ def compare_write_reports2(printer, sap):
     """
     f = open(args.out, 'wt')
     output = csv.writer(f)
-    output.writerow(('id', 'status', 'message', 'tax code', 'taxes by tax', 'tax sum'))
+    output.writerow(('id', 'status', 'message', 'comment', 'tax code diff', 'tax diff', 'taxes by tax', 'tax sum'))
 
     out = {}
     r1_keys = set(printer.keys())
@@ -544,14 +578,16 @@ def compare_write_reports2(printer, sap):
     c = len(r1_keys), len(r2_keys), len(both)
     ok = 0
     bad = 0
+    tax_diff_by_tax = {}
+
     # parse records, where ids are in both dicts
 
     # equal = [o for o in both for r1 in printer[o] for r2 in sap[o] if abs(r1.gross -  r2.gross) == 0]
 
     for refNum in only_r1:
-        output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_PRINTER, None, printer[refNum].sale_sum_by_tax))
+        output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_PRINTER, None, None, None, printer[refNum].sale_sum_by_tax))
     for refNum in only_r2:
-        output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, sap[refNum].sale_sum_by_tax))
+        output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, None, None, sap[refNum].sale_sum_by_tax))
 
     for refNum in both:
         # if refNum != '1000003483':
@@ -561,12 +597,24 @@ def compare_write_reports2(printer, sap):
         if len(messages):
             a = 'd'
             for message in messages:
-                output.writerow((refNum, message["status"], message["message"], message["tax_symbol_err"],
+                tax_symbol = message["tax_symbol_err"]
+
+                # liczenie sumy roznic podatkow
+                tax_diff = None
+                if tax_symbol:
+                    tax_diff = Record.round(abs(abs(printer[refNum].tax_sum_by_tax.get(tax_symbol, 0)) - abs(sap[refNum].tax_sum_by_tax.get(tax_symbol, 0))))
+                    tax_sum = tax_diff_by_tax.get(tax_symbol, 0) + tax_diff
+                    tax_diff_by_tax[tax_symbol] = tax_sum
+
+                output.writerow((refNum, message["status"], message["message"], message["comment"], tax_symbol, tax_diff,
                                  (printer[refNum].tax_sum_by_tax, sap[refNum].tax_sum_by_tax),
                                  (printer[refNum].total_tax_sum, sap[refNum].total_tax_sum)))
 
         else:
             b = 'blad?'
+
+    for tax in tax_diff_by_tax:
+        output.writerow((tax, Record.round(tax_diff_by_tax[tax])))
         # msg = 'a'
         # eq = '1'
         # print(msg)
