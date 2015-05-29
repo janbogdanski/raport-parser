@@ -158,9 +158,6 @@ class Record (object):
         gross_sums = (printer.gross_sum, sap.gross_sum, abs(printer.gross_sum) - abs(sap.gross_sum))
         r = (len_prices, gross_sums, cmp(printer.sale_sum_by_tax, sap.sale_sum_by_tax))
 
-
-        if not len(messages):
-            a = 'g'
         return messages
 
         sum_gross = sum(sap.gross_prices)
@@ -280,6 +277,7 @@ def read_printer_report():
     # 'blocks' contain valid receipts
     for receipt in blocks:
 
+        refNum = None
         prices = []
         sale_sum_by_tax = {}
         tax_sum_by_tax = {}
@@ -312,8 +310,6 @@ def read_printer_report():
             # suma podatku po typie podatku
             tax_type_by_tax = re.search(PrinterRecord.RECEIPT_TAX_SUM_BY_TAX_REGEX, line, re.I)
             if tax_type_by_tax:
-                a = Record.round(tax_type_by_tax.group(2).strip().replace(' ', '').replace(',', '.'))
-                tax_sum_by_tax[tax_type_by_tax.group(1)] = Record.round(tax_type_by_tax.group(2).strip().replace(' ', '').replace(',', '.'))
                 tax_sum_by_tax[tax_type_by_tax.group(1)] = Record.round(tax_type_by_tax.group(2).strip().replace(' ', '').replace(',', '.'))
 
             # calkowita suma podatku+
@@ -329,6 +325,11 @@ def read_printer_report():
             if PrinterRecord.RECEIPT_REF_NUM_ROW in line:
                  refNum = str(line.replace(PrinterRecord.RECEIPT_REF_NUM_ROW, '')
                               .replace(PrinterRecord.RECEIPT_REF_NUM_PREFIX, '').strip().replace(' ', ''))
+        if not refNum:
+            # np. testowe wydruki na drukarce
+            print 'brak refNum na paragonie'
+            # print receipt
+            continue
         # print prices
         compare_sum = 0
         compare = []
@@ -365,23 +366,18 @@ def read_sap_report2():
         [(next(rejestr)) for i in range(0, first_line)]
 
         sap = defaultdict(list)
-        ret = defaultdict(list)
-        test = defaultdict(list)
-        test2 = defaultdict(list)
         for line in rejestr:
             try:
 
                 type_found = line[SapRecord.POS_TYPE].strip()
                 if type_found in SapRecord.TYPE_EXPECTED:
-                    a = SapRecord()
-
                     # invalid type
 
                     # continue
                     # print lineValues
                     refNum = str(line[SapRecord.POS_REF_NO].strip())
-                    if refNum in test2:
-                        record = test2[refNum]
+                    if refNum in sap:
+                        record = sap[refNum]
                         """
                         @:type SapRecord
                         """
@@ -414,8 +410,6 @@ def read_sap_report2():
                     # tax_sum_by_tax = {}
                     total_tax_sum = 0
 
-
-
                     tax_symbol = line[SapRecord.POS_TAX_SYMBOL].strip()
                     if tax_symbol in SapRecord.tax_map:
                         tax_symbol = SapRecord.tax_map[tax_symbol]
@@ -429,13 +423,7 @@ def read_sap_report2():
                     record.net += net
 
                     # print(refNum)
-                    sap[refNum].append(record)
-                    rec = {}
-                    # rec['refNum'] = record.refNum
-                    rec['gross'] = gross
-                    ret[refNum].append(gross)
-                    test2[refNum] = record
-                    test[refNum].append(record)
+                    sap[refNum] = record
 
                     # pprint (vars(record))
             except ValueError as detail:
@@ -444,9 +432,7 @@ def read_sap_report2():
             except IndexError as detail:
                 print detail
                 print line
-    # return sap
-
-    return test2
+    return sap
 
 def read_sap_report():
     first_line = 10
@@ -597,7 +583,6 @@ def compare_write_reports2(printer, sap):
         # print(refNum)
         messages = Record.equal_records(printer[refNum], sap[refNum])
         if len(messages):
-            a = 'd'
             for message in messages:
                 tax_symbol = message["tax_symbol_err"]
 
@@ -665,15 +650,9 @@ def main():
 
     sap = read_sap_report2()
     printer = read_printer_report()
-    a = sap['1000000016']
 
     # print sap
     # print printer
-
-    test1 = sap['1000003334']
-    test2 = printer['1000003334']
-    pprint((test1, test2))
-    print cmp(test1, test2)
 
     compare_write_reports2(printer, sap)
 
