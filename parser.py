@@ -238,7 +238,8 @@ class PrinterRecord (Record):
     HEADER_DELIMITER = "----------------------------------------"
 
     # oddziela kolejne rachunki
-    RECEIPT_DELIMITER = "****************************************"
+    RECEIPT_DELIMITER = r"\*{40,}"
+
 
     # na rachunku oddziela czesc z produktami od czesci z podsumowaniem
     PRODUCTS_SUMMARY_DELIMITER = "- - - - - - - - - - - - - - - - - - - - "
@@ -261,7 +262,7 @@ def read_printer_report():
     uniqe = 0
     f = open(args.printer)
     rejestr = f.read()
-    blocks_read = rejestr.split(PrinterRecord.RECEIPT_DELIMITER)
+    blocks_read = re.split(PrinterRecord.RECEIPT_DELIMITER, rejestr)
     blocks = []
     printer = defaultdict(list)
     ret = defaultdict(list)
