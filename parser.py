@@ -163,6 +163,9 @@ class SapRecord (Record):
     POS_NET = 42
     POS_TAX_VAL = 43
 
+    #sap report contains few lines on top, which should be skipped
+    FIRST_REPORT_LINE = 7
+
     TYPE_EXPECTED = ("RV",) # "R1"
 
     TAX_TECHNICAL_CODE = "YA"
@@ -291,12 +294,12 @@ def read_printer_report():
     return printer
 
 def read_sap_report2():
-    first_line = 7
+
     with open(args.sap, 'r') as f:
         rejestr = csv.reader(f, delimiter="\t")
 
-        #
-        [(next(rejestr)) for i in range(0, first_line)]
+        # skip first lines
+        [(next(rejestr)) for i in range(0, SapRecord.FIRST_REPORT_LINE)]
 
         sap = defaultdict(list)
         for line in rejestr:
