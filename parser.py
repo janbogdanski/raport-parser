@@ -258,8 +258,12 @@ class PrinterRecord (Record):
 
 def read_printer_report():
     uniqe = 0
-    f = open(args.printer)
-    rejestr = f.read()
+    rejestr = ""
+    for filename in args.printer:
+        f = open(filename)
+        rejestr += f.read()
+    # f = open(args.printer)
+    # rejestr = f.read()
     blocks_read = re.split(PrinterRecord.RECEIPT_DELIMITER, rejestr)
     blocks = []
     printer = defaultdict(list)
@@ -671,7 +675,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parser raportow z drukarki fiskalnej i systemu SAP."
                                                  " Sprawdza spojnosc danych miedzy tymi raportami, podsumowanie zapisane w csv")
     parser.add_argument('-s', '--sap', default="rejest_VAT.txt", help="nazwa pliku z raportem z systemu SAP")
-    parser.add_argument('-p', '--printer', default="printer.txt", help="nazwa pliku z raportem z drukarki fiskalnej") # nargs="+"
+    parser.add_argument('-p', '--printer', default="printer.txt", nargs="+", help="nazwa pliku z raportem z drukarki fiskalnej") # nargs="+"
     parser.add_argument('-o', '--out', default="output.txt", help="naza wyjsciowego csv", )
     args = parser.parse_args()
     print(args)
