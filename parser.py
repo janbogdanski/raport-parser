@@ -574,8 +574,15 @@ def compare_write_reports2(printer, sap):
 
     for refNum in only_r1:
         output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_PRINTER, None, None, None, printer[refNum].sale_sum_by_tax))
+        for tax in printer[refNum].tax_sum_by_tax:
+            output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, tax, printer[refNum].tax_sum_by_tax[tax], printer[refNum].sale_sum_by_tax))
     for refNum in only_r2:
         output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, None, None, sap[refNum].sale_sum_by_tax))
+        for tax in sap[refNum].tax_sum_by_tax:
+            if tax == SapRecord.TAX_TECHNICAL_CODE and abs(sap[refNum].tax_sum_by_tax[tax]) < eps:
+                    continue
+            output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, tax, sap[refNum].tax_sum_by_tax[tax], sap[refNum].sale_sum_by_tax))
+
 
     for refNum in both:
         # if refNum != '1000003483':
