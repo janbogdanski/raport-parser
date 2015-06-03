@@ -6,9 +6,11 @@
 # zawezanie dla podanych dat - w zrzutach moga byc dane z szerszych okresow
 from collections import defaultdict
 from pprint import pprint
+from email.utils import parsedate
 import re
 import csv
 import argparse
+import time
 
 eps = 0.000001
 
@@ -26,6 +28,8 @@ class Record (object):
     total_tax_sum = 0
     gross_sum = 0
     gross_prices = []
+
+    DATE_FORMAT = None
 
     STATUS_OK = 'OK'
     STATUS_BAD = 'BAD'
@@ -154,9 +158,11 @@ class Record (object):
         return messages
 
 class SapRecord (Record):
+    POS_TYPE_SUM = 1
     POS_TYPE = 3
     POS_DOC_NO = 5
     POS_REF_NO = 11
+    POS_DOC_DATE = 16
     POS_TAX_SYMBOL = 39
     POS_TAX_RATE = 40
     POS_GROSS = 41
@@ -167,8 +173,11 @@ class SapRecord (Record):
     FIRST_REPORT_LINE = 7
 
     TYPE_EXPECTED = ("RV",) # "R1"
+    TYPE_SUM_MARK = "*"
 
     TAX_TECHNICAL_CODE = "YA"
+
+    DATE_FORMAT = "%d.%m.%Y"
     type = ''
     taxRate = ''
     gross = ''
@@ -188,12 +197,15 @@ class PrinterRecord (Record):
     RECEIPTS_EXCLUDED = ('A N U L O W A N Y', 'B Ł Ą D   I N T E R F E J S U', 'R A P O R T   D O B O W Y', 'R A P O R T   S E R W I S O W Y',)
     # na pewno jesszcze "STAN KASY", ale ryzykowne
 
+    RECEIPT_DOCUMENT_DATE = "^(\d{4}\-\d{2}\-\d{2})\s+\d+$"
     RECEIPT_SALE_SUM_BY_TAX_REGEX = "^SPRZEDAŻ\s+OPODATK.\s+([A-Z]{1})\s+(\d+,\d+)$"
     RECEIPT_TAX_SUM_BY_TAX_REGEX = "^PTU\s+([A-Z]{1})\s+.*?(\d+,\d+)$"
     RECEIPT_TOTAL_TAX_SUM_REGEX = "^SUMA\s+PTU.*?(\d+,\d+)$"
     RECEIPT_SUM_ROW = "S U M A   P L N"
     RECEIPT_REF_NUM_ROW = "Nr sys."
     RECEIPT_REF_NUM_PREFIX = "DNPL"
+
+    DATE_FORMAT = "%Y-%m-%d" # 2015-04-01
 
     # PRICE_PATTERN = "(\d+,\d+)([A-Z]{1}|[A-Z]{3})$"
 
@@ -231,6 +243,8 @@ def read_printer_report():
         sale_sum_by_tax = {}
         tax_sum_by_tax = {}
         total_tax_sum = 0
+        valid_date = False
+
         try:
             # split receipts to products part and summary
             products, summary = receipt.split(PrinterRecord.PRODUCTS_SUMMARY_DELIMITER)
@@ -242,6 +256,13 @@ def read_printer_report():
         for line in products.splitlines():
             # print line
 
+            # data dokumentu, na start valid_date jest false,
+            doc_date = re.search(PrinterRecord.RECEIPT_DOCUMENT_DATE, line, re.I)
+
+            if not valid_date and doc_date:
+                converted_date = time.strptime(doc_date.group(1), PrinterRecord.DATE_FORMAT)
+                if args.date and time.strftime("%m.%Y", converted_date) == args.date:
+                    valid_date = True
             # sprawdzenie czy na koncu linii jest cena np. 11,54A
             # search = re.search(r"(\d+,\d+)([A-Z]{1}|[A-Z]{3})$", line, re.I) # 1 lub 3 znaki - w sumie 3 nie powinno byc
             search = re.search(r"(\d+,\d+)([A-Z]{1})$", line, re.I)
@@ -281,6 +302,9 @@ def read_printer_report():
             print 'brak refNum na paragonie'
             # print receipt
             continue
+        if not valid_date:
+            print 'data spoza zakresu ' + refNum
+            continue
 
         record = PrinterRecord()
         record.refNum = refNum
@@ -307,7 +331,16 @@ def read_sap_report2():
 
                 type_found = line[SapRecord.POS_TYPE].strip()
                 if type_found in SapRecord.TYPE_EXPECTED:
-                    # invalid type
+                    if line[SapRecord.POS_TYPE_SUM].strip() == SapRecord.TYPE_SUM_MARK:
+
+                        # linia z suma dla danego typu
+                        continue
+
+                    # check if document date if equal to passed
+                    doc_date = str(line[SapRecord.POS_DOC_DATE].strip())
+                    converted_date = time.strptime(doc_date, SapRecord.DATE_FORMAT)
+                    if args.date and time.strftime("%m.%Y", converted_date) != args.date:
+                        continue
 
                     refNum = str(line[SapRecord.POS_REF_NO].strip())
                     if refNum in sap:
@@ -325,7 +358,7 @@ def read_sap_report2():
                     gross = SapRecord.to_float(line[SapRecord.POS_GROSS].strip())
 
                     # stawka podatku, liczbowo
-                    taxRate = SapRecord.to_float(line[SapRecord.POS_TAX_RATE].strip())
+                    # taxRate = SapRecord.to_float(line[SapRecord.POS_TAX_RATE].strip())
 
                     # net - wartosc netto za dany przedmiot
                     net = SapRecord.to_float(line[SapRecord.POS_NET].strip())
@@ -371,24 +404,28 @@ def compare_write_reports2(printer, sap):
     output = csv.writer(f)
     output.writerow(('id', 'status', 'message', 'comment', 'tax code diff', 'tax diff', 'taxes by tax', 'tax sum'))
 
-    r1_keys = set(printer.keys())
-    r2_keys = set(sap.keys())
-    both = r1_keys.intersection(r2_keys)
+    printer_keys = set(printer.keys())
+    sap_keys = set(sap.keys())
+    both = printer_keys.intersection(sap_keys)
 
-    only_r1 = r1_keys - r2_keys
-    only_r2 = r2_keys - r1_keys
+    only_printer = printer_keys - sap_keys
+    only_sap = sap_keys - printer_keys
     tax_diff_by_tax = {}
 
-    for refNum in only_r1:
-        output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_PRINTER, None, None, None, printer[refNum].sale_sum_by_tax))
+    for refNum in only_printer:
+        # output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_PRINTER, None, None, None, printer[refNum].tax_sum_by_tax, printer[refNum].total_tax_sum))
         for tax in printer[refNum].tax_sum_by_tax:
-            output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, tax, printer[refNum].tax_sum_by_tax[tax], printer[refNum].sale_sum_by_tax))
-    for refNum in only_r2:
-        output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, None, None, sap[refNum].sale_sum_by_tax))
+            output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_PRINTER, None,
+                             tax, printer[refNum].tax_sum_by_tax[tax], printer[refNum].tax_sum_by_tax, printer[refNum].total_tax_sum))
+    for refNum in only_sap:
+        # output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, None, None, sap[refNum].tax_sum_by_tax, sap[refNum].total_tax_sum))
         for tax in sap[refNum].tax_sum_by_tax:
+
             if tax == SapRecord.TAX_TECHNICAL_CODE and abs(sap[refNum].tax_sum_by_tax[tax]) < eps:
-                    continue
-            output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, tax, sap[refNum].tax_sum_by_tax[tax], sap[refNum].sale_sum_by_tax))
+                # skip when contains technical code and tax
+                continue
+            output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None,
+                             tax, abs(sap[refNum].tax_sum_by_tax[tax]), sap[refNum].tax_sum_by_tax, sap[refNum].total_tax_sum))
 
     for refNum in both:
         messages = Record.equal_records(printer[refNum], sap[refNum])
@@ -412,8 +449,10 @@ def compare_write_reports2(printer, sap):
 
     for tax in tax_diff_by_tax:
         output.writerow((tax, Record.round(tax_diff_by_tax[tax])))
-    pprint(len(both))
-    pprint(len(only_r1))
+
+    print '\nliczba wspolnych - ' + str(len(both))
+    print 'liczba na drukarce - ' + str(len(only_printer))
+    print 'liczba w sap - ' + str(len(only_sap))
 
 def main():
 
@@ -430,6 +469,8 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--sap', default="rejest_VAT.txt", help="nazwa pliku z raportem z systemu SAP")
     parser.add_argument('-p', '--printer', default="printer.txt", nargs="+", help="nazwa pliku z raportem z drukarki fiskalnej") # nargs="+"
     parser.add_argument('-o', '--out', default="output.txt", help="naza wyjsciowego csv", )
+    parser.add_argument('-d', '--date', default="", help="miesiac i rok dla do zawezenia parsowanych raportow"
+                                                         " w formacie 05.2015", )
     args = parser.parse_args()
     print(args)
     print(args.sap)
