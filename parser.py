@@ -194,7 +194,8 @@ class PrinterRecord (Record):
 
     # na rachunku oddziela czesc z produktami od czesci z podsumowaniem
     PRODUCTS_SUMMARY_DELIMITER = "- - - - - - - - - - - - - - - - - - - -"
-    RECEIPTS_EXCLUDED = ('A N U L O W A N Y', 'B Ł Ą D   I N T E R F E J S U', 'R A P O R T   D O B O W Y', 'R A P O R T   S E R W I S O W Y',)
+    RECEIPTS_EXCLUDED = ('A N U L O W A N Y', 'B Ł Ą D   I N T E R F E J S U', 'R A P O R T   D O B O W Y', 'R A P O R T   S E R W I S O W Y',
+                         'ZEROWANIE RAM', 'PROGRAMOWANIE ZEGARA', 'RAPORT ZEROWANIA RAM', 'PROGRAMOWANIE NAGŁÓWKA', 'RAPORT KONFIGURACJI SPRZĘTU')
     # na pewno jesszcze "STAN KASY", ale ryzykowne
 
     RECEIPT_DOCUMENT_DATE = "^(\d{4}\-\d{2}\-\d{2})\s+\d+$"
