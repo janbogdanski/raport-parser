@@ -303,7 +303,7 @@ def read_printer_report():
             print 'brak refNum na paragonie'
             # print receipt
             continue
-        if not valid_date:
+        if args.date and not valid_date:
             print 'data spoza zakresu ' + refNum
             continue
 
