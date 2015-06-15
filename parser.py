@@ -3,10 +3,7 @@
 
 # ### todo
 # check files encodings
-# zawezanie dla podanych dat - w zrzutach moga byc dane z szerszych okresow
 from collections import defaultdict
-from pprint import pprint
-from email.utils import parsedate
 import re
 import csv
 import argparse
@@ -26,9 +23,12 @@ class Record (object):
 
     # calkowita suma podatku na rachunku
     total_tax_sum = 0
+
+    # nieuzywane - suma brutto
     gross_sum = 0
     gross_prices = []
 
+    # format daty na poszczegolnym typie zrodla (drukarka, sap)
     DATE_FORMAT = None
 
     STATUS_OK = 'OK'
@@ -38,7 +38,7 @@ class Record (object):
     MESSAGE_TECHNICAL_CODE = "Technical code w zrzucie"
     MESSAGE_DIFFERENT_TAX_SUM = "Rozne kwoty podatku"
     MESSAGE_TAX_ONLY_PRINTER = "Podatek na rachunku tylko na drukarce"
-    MESSAGE_TAX_ONLY_SAP = "Podatek na rachunku tylko wa SAP"
+    MESSAGE_TAX_ONLY_SAP = "Podatek na rachunku tylko w SAP"
     MESSAGE_ONLY_PRINTER = "Dokument o danym ID tylko na drukarce"
     MESSAGE_ONLY_SAP = "Dokument o danym ID tylko SAP"
     MESSAGE_EQUAL_TAX_SUM = "Sumy podatkow na rachunkach sa zgodne"
@@ -54,14 +54,15 @@ class Record (object):
     }
 
     def __init__(self):
+
+        # inicjowanie pustymi wartosciami, cos nie tak bylo przy inicjowaniu
+        # nowy obiekt tworzony w petli, mial wlasciwosci poprzedniego
         self.sale_sum_by_tax = {}
         self.tax_sum_by_tax = {}
         self.total_tax_sum = 0
         self.gross_sum = 0
         self.gross_prices = []
 
-    # def __eq__(self, other):
-    #     print self.
     @staticmethod
     def to_float(num):
         return round(float(num.replace('.', '').replace(',', '.').replace(' ', '')), 2)
@@ -158,6 +159,8 @@ class Record (object):
         return messages
 
 class SapRecord (Record):
+
+    # columns mappings
     POS_TYPE_SUM = 1
     POS_TYPE = 3
     POS_DOC_NO = 5
@@ -173,6 +176,8 @@ class SapRecord (Record):
     FIRST_REPORT_LINE = 7
 
     TYPE_EXPECTED = ("RV",) # "R1"
+
+    # each type has sum row, which should be skipped
     TYPE_SUM_MARK = "*"
 
     TAX_TECHNICAL_CODE = "YA"
@@ -217,6 +222,7 @@ def read_printer_report():
     for filename in args.printer:
         f = open(filename)
         rejestr += f.read()
+    # rejestr.decode('iso-8859-1').encode('utf8')
 
     # split rejestr to blocks by receipt delimiter
     blocks_read = re.split(PrinterRecord.RECEIPT_DELIMITER, rejestr)
@@ -253,7 +259,9 @@ def read_printer_report():
             print detail
             print receipt
             print "sprawdz kodowanie pliku (czy utf8) jesli duzo"
+            continue
 
+        # parse products part line by line
         for line in products.splitlines():
             # print line
 
@@ -264,15 +272,15 @@ def read_printer_report():
                 converted_date = time.strptime(doc_date.group(1), PrinterRecord.DATE_FORMAT)
                 if args.date and time.strftime("%m.%Y", converted_date) == args.date:
                     valid_date = True
+
             # sprawdzenie czy na koncu linii jest cena np. 11,54A
-            # search = re.search(r"(\d+,\d+)([A-Z]{1}|[A-Z]{3})$", line, re.I) # 1 lub 3 znaki - w sumie 3 nie powinno byc
             search = re.search(r"(\d+,\d+)([A-Z]{1})$", line, re.I)
             if search:
 
                 price = float(search.group(1).strip().replace(' ', '').replace(',', '.'))
                 prices.append(price)
 
-        # collect data from lines
+        # collect data from summary lines, taxes and sums
         for line in summary.splitlines():
 
             # suma sprzedazy po typie podatku
@@ -285,7 +293,7 @@ def read_printer_report():
             if tax_type_by_tax:
                 tax_sum_by_tax[tax_type_by_tax.group(1)] = Record.round(tax_type_by_tax.group(2).strip().replace(' ', '').replace(',', '.'))
 
-            # calkowita suma podatku+
+            # calkowita suma podatku
             tax_total = re.search(PrinterRecord.RECEIPT_TOTAL_TAX_SUM_REGEX, line, re.I)
             if tax_total:
                 total_tax_sum = Record.round(tax_total.group(1).strip().replace(' ', '').replace(',', '.'))
@@ -334,7 +342,7 @@ def read_sap_report2():
                 if type_found in SapRecord.TYPE_EXPECTED:
                     if line[SapRecord.POS_TYPE_SUM].strip() == SapRecord.TYPE_SUM_MARK:
 
-                        # linia z suma dla danego typu
+                        # linia z suma wszystkich wpisow dla danego typu
                         continue
 
                     # check if document date if equal to passed
@@ -414,12 +422,10 @@ def compare_write_reports2(printer, sap):
     tax_diff_by_tax = {}
 
     for refNum in only_printer:
-        # output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_PRINTER, None, None, None, printer[refNum].tax_sum_by_tax, printer[refNum].total_tax_sum))
         for tax in printer[refNum].tax_sum_by_tax:
             output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_PRINTER, None,
                              tax, printer[refNum].tax_sum_by_tax[tax], printer[refNum].tax_sum_by_tax, printer[refNum].total_tax_sum))
     for refNum in only_sap:
-        # output.writerow((refNum, Record.STATUS_BAD, Record.MESSAGE_ONLY_SAP, None, None, None, sap[refNum].tax_sum_by_tax, sap[refNum].total_tax_sum))
         for tax in sap[refNum].tax_sum_by_tax:
 
             if tax == SapRecord.TAX_TECHNICAL_CODE and abs(sap[refNum].tax_sum_by_tax[tax]) < eps:
@@ -470,8 +476,8 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--sap', default="rejest_VAT.txt", help="nazwa pliku z raportem z systemu SAP")
     parser.add_argument('-p', '--printer', default="printer.txt", nargs="+", help="nazwa pliku z raportem z drukarki fiskalnej") # nargs="+"
     parser.add_argument('-o', '--out', default="output.txt", help="naza wyjsciowego csv", )
-    parser.add_argument('-d', '--date', default="", help="miesiac i rok dla do zawezenia parsowanych raportow"
-                                                         " w formacie 05.2015", )
+    parser.add_argument('-d', '--date', default="", help="miesiac i rok, do zawezenia parsowanych raportow"
+                                                         " w formacie MM.RRRR, np. 05.2015", )
     args = parser.parse_args()
     print(args)
     print(args.sap)
