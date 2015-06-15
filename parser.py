@@ -270,8 +270,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Parser raportow z drukarki fiskalnej i systemu SAP."
                                                  " Sprawdza spojnosc danych miedzy tymi raportami, podsumowanie zapisane w csv")
-    parser.add_argument('-s', '--sap', default="rejest_VAT.txt", help="nazwa pliku z raportem z systemu SAP")
-    parser.add_argument('-p', '--printer', default="printer.txt", nargs="+", help="nazwa pliku z raportem z drukarki fiskalnej") # nargs="+"
+    parser.add_argument('-s', '--sap', default="files/rejest_VAT.txt", help="nazwa pliku z raportem z systemu SAP")
+    parser.add_argument('-p', '--printer', default="files/printer.txt", nargs="+", help="nazwa pliku z raportem z drukarki fiskalnej") # nargs="+"
     parser.add_argument('-o', '--out', default="output.txt", help="naza wyjsciowego csv", )
     parser.add_argument('-d', '--date', default="", help="miesiac i rok, do zawezenia parsowanych raportow"
                                                          " w formacie MM.RRRR, np. 05.2015", )
