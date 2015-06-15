@@ -443,7 +443,8 @@ def compare_write_reports2(printer, sap):
                 # liczenie sumy roznic podatkow
                 tax_diff = None
                 if tax_symbol:
-                    tax_diff = Record.round(abs(abs(printer[refNum].tax_sum_by_tax.get(tax_symbol, 0)) - abs(sap[refNum].tax_sum_by_tax.get(tax_symbol, 0))))
+                    # tax_diff = Record.round(abs(abs(printer[refNum].tax_sum_by_tax.get(tax_symbol, 0)) - abs(sap[refNum].tax_sum_by_tax.get(tax_symbol, 0))))
+                    tax_diff = Record.round(printer[refNum].tax_sum_by_tax.get(tax_symbol, 0) - abs(sap[refNum].tax_sum_by_tax.get(tax_symbol, 0)))
                     tax_sum = tax_diff_by_tax.get(tax_symbol, 0) + tax_diff
                     tax_diff_by_tax[tax_symbol] = tax_sum
 
