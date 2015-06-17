@@ -200,23 +200,35 @@ class ReportParser (object):
                     print line
         return sap
 
+    def get_common_elements(self, printer, sap):
+        """
+        :type printer: list of PrinterRecord
+        :type sap: list of SapRecord
+        :return:
+        """
+        printer_keys = set(printer.keys())
+        sap_keys = set(sap.keys())
+
+        both = printer_keys.intersection(sap_keys)
+        only_printer = printer_keys - sap_keys
+        only_sap = sap_keys - printer_keys
+
+        return both, only_printer, only_sap
+
     def compare_write_reports2(self, printer, sap):
         """
         :type printer: list of PrinterRecord
         :type sap: list of SapRecord
         :return:
         """
+
+        tax_diff_by_tax = {}
         f = open(self.args["out"], 'wt')
         output = csv.writer(f)
         output.writerow(('id', 'status', 'message', 'comment', 'tax code diff', 'tax diff', 'taxes by tax', 'tax sum'))
 
-        printer_keys = set(printer.keys())
-        sap_keys = set(sap.keys())
-        both = printer_keys.intersection(sap_keys)
-
-        only_printer = printer_keys - sap_keys
-        only_sap = sap_keys - printer_keys
-        tax_diff_by_tax = {}
+        both, only_printer, only_sap = self.get_common_elements(printer, sap)
+        # printer_keys = set(printer.keys())
 
         for refNum in only_printer:
             for tax in printer[refNum].tax_sum_by_tax:
