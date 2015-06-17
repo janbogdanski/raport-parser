@@ -1,0 +1,215 @@
+        DOSTÊPNE NOŒNIKI DANYCH
+Noœnik: 1 (Otwarty) (Za³adowany)
+ 2010-06-15 - 2015-05-31, 1 - 1128
+----------------------------------------
+           NIP 527-23-80-769
+2015-04-01                       1267729
+         N I E F I S K A L N Y
+    B £ ¥ D   I N T E R F E J S U
+B³¹d                          trend 2041
+         N I E F I S K A L N Y
+      #001      KIEROWNIK          00:31
+                10011441
+****************************************
+           NIP 527-23-80-769
+2015-04-01                       1267730
+        PARAGON FISKALNY - KOPIA
+TestBSX                1szt. x0,01 0,01A
+- - - - - - - - - - - - - - - - - - - -
+SPRZEDA¯ OPODATK. A                 0,01
+PTU A 23,00 %                       0,00
+SUMA PTU                            0,00
+S U M A   P L N                 0 , 0 1
+00001 #001      KIEROWNIK          00:32
+ACB62FFB157F632E680186C5F29D9B764EB8BDF9
+              BAM 10011441
+         KOD KRESKOWY BSX/1/TEST
+               BSX/1/TEST
+GOTÓWKA                         0,01 PLN
+****************************************
+           NIP 527-23-80-769
+2015-04-08                       1306733
+         N I E F I S K A L N Y
+          PROGRAMOWANIE ZEGARA
+Zegar przed zmian¹:     2015-04-08;16:36
+Zegar po zmianie:       2015-04-08;16:36
+         N I E F I S K A L N Y
+      #001      SERWIS             16:36
+                10011441
+****************************************
+           NIP 527-23-80-769
+2015-04-10                       1306734
+         N I E F I S K A L N Y
+    R A P O R T   S E R W I S O W Y
+PROGRAM:    POSNET THERMAL HS FV EJ 1.01
+PAMIÊÆ STA£A:
+            POSNET THERMAL HS FV EJ 1.01
+- - - - - - - - - - - - - - - - - - - -
+NIP:                   NIP 527-23-80-769
+NUMER UNIKATOWY:            BAM 10011441
+TRYB PRACY DRUKARKI:            FISKALNY
+DATA FISKALIZACJI:            2010-06-15
+- - - - - - - - - - - - - - - - - - - -
+WALUTA EWIDENCYJNA:                  PLN
+ILOŒÆ ZMIAN WALUTY EWIDENCYJNEJ   1/1830
+- - - - - - - - - - - - - - - - - - - -
+Liczba zmian stawek PTU:            2/30
+AKTUALNE STAWKI PTU:
+PTU A                            23,00 %
+PTU B                             8,00 %
+PTU C                             0,00 %
+PTU D                             5,00 %
+PTU E                                ---
+PTU F                                ---
+G                                 SP.ZW.
+- - - - - - - - - - - - - - - - - - - -
+Zerowania RAM                      1/200
+1 zerowanie typu 0000 0000    2010-12-21
+- - - - - - - - - - - - - - - - - - - -
+Raporty dobowe                 1099/1830
+- - - - - - - - - - - - - - - - - - - -
+ILOŒÆ EL. NOŒNIKÓW DANYCH              1
+ILOŒÆ USZKODZONYCH NOŒNIKÓW DANYCH     0
+- - - - - - - - - - - - - - - - - - - -
+         N I E F I S K A L N Y
+      #001      KIEROWNIK          08:48
+                10011441
+****************************************
+           NIP 527-23-80-769
+2015-04-13                             1
+         N I E F I S K A L N Y
+- - - - - - - - - - - - - - - - - - - -
+ZEROWANIE RAM   W             2015-04-13
+2                                  12:15
+- - - - - - - - - - - - - - - - - - - -
+         N I E F I S K A L N Y
+      #001      KIEROWNIK          12:15
+                10011441
+****************************************
+           NIP 527-23-80-769
+2015-04-13                             9
+         N I E F I S K A L N Y
+         PROGRAMOWANIE NAG£ÓWKA
+    A G I T O   S P .   Z   O . O .
+  Ul. ¯eromskiego 17, 01-882 Warszawa
+         N I E F I S K A L N Y
+      #001      KIEROWNIK          14:19
+                10011441
+****************************************
+           NIP 527-23-80-769
+2015-04-14                           146
+        PARAGON FISKALNY - KOPIA
+Op³ata za wysy³kê      1szt. x8,00 8,00A
+           A N U L O W A N Y
+      #001      KIEROWNIK          13:14
+                10011441
+****************************************
+           NIP 527-23-80-769
+2015-04-14                           536
+            F I S K A L N Y
+      R A P O R T   D O B O W Y
+PTU A                            23,00 %
+PTU B                             8,00 %
+PTU C                             0,00 %
+PTU D                             5,00 %
+G                                 SP.ZW.
+- - - - - - - - - - - - - - - - - - - -
+2015-04-14                          1100
+- - - - - - - - - - - - - - - - - - - -
+SPRZEDA¯ OPODATK. PTU A        137869,81
+SPRZEDA¯ OPODATK. PTU B          5903,81
+SPRZEDA¯ OPODATK. PTU C            33,96
+SPRZEDA¯ OPODATK. PTU D             9,51
+SPRZEDA¯ OPODATK. PTU AFV           0,00
+SPRZEDA¯ OPODATK. PTU BFV           0,00
+SPRZEDA¯ OPODATK. PTU CFV           0,00
+SPRZEDA¯ OPODATK. PTU DFV           0,00
+SPRZEDA¯ ZWOLN. G                   0,00
+SPRZEDA¯ ZWOLN. GFV                 0,00
+KWOTA PTU A                     31710,06
+KWOTA PTU B                       472,30
+KWOTA PTU D                         0,48
+KWOTA PTU AFV                       0,00
+KWOTA PTU BFV                       0,00
+KWOTA PTU DFV                       0,00
+£¥CZNA KWOTA PTU                32182,84
+£¥CZNA NALE¯NOŒÆ               175999,93
+EWIDENCJA                            PLN
+- - - - - - - - - - - - - - - - - - - -
+  TOTALIZERY STAWEK VAT (NARASTAJ¥CO)
+KWOTA PTU A                 122992147,31
+KWOTA PTU B                   1523289,44
+KWOTA PTU C                         0,00
+KWOTA PTU D                      7002,78
+KWOTA PTU E                         0,00
+KWOTA PTU F                         0,00
+SPRZEDA¯ ZWOLN. G                1972,00
+KWOTA PTU AFV                       0,00
+KWOTA PTU BFV                       0,00
+KWOTA PTU CFV                       0,00
+KWOTA PTU DFV                       0,00
+KWOTA PTU EFV                       0,00
+KWOTA PTU FFV                       0,00
+SPRZEDA¯ ZWOLN. GFV                 0,00
+£¥CZNA NALE¯NOŒÆ            679216736,74
+- - - - - - - - - - - - - - - - - - - -
+ZMIANY W BAZIE TOWAROWEJ             426
+- - - - - - - - - - - - - - - - - - - -
+ILOŒÆ PARAGONÓW ANULOWANYCH           19
+KWOTA PARAGONÓW ANULOWANYCH       278,99
+- - - - - - - - - - - - - - - - - - - -
+ILOŒÆ PARAGONÓW                      485
+- - - - - - - - - - - - - - - - - - - -
+ILOŒÆ FAKTUR                           0
+- - - - - - - - - - - - - - - - - - - -
+ZEROWANIE RAM  *W             2015-04-13
+2                                  12:15
+- - - - - - - - - - - - - - - - - - - -
+ILOŒÆ POZYCJI                         48
+- - - - - - - - - - - - - - - - - - - -
+      #001      KIEROWNIK          23:04
+B5232BDD1B5238FE5BFED8BF32624A6A061A6A51
+         SHA-1 DANYCH DOBOWYCH
+A5BCB61072AB6FD2AE3AEDE5564D03E41776221C
+- - - - - - - - - - - - - - - - - - - -
+              BAM 10011441
+*******************************************************************************
+           NIP 527-23-80-769
+2015-04-13                             2
+         N I E F I S K A L N Y
+- - - - - - - - - - - - - - - - - - - -
+          RAPORT ZEROWANIA RAM
+- - - - - - - - - - - - - - - - - - - -
+Informacja dotycz¹ca przyczyn
+uszkodzenia zosta³a utracona
+- - - - - - - - - - - - - - - - - - - -
+         N I E F I S K A L N Y
+      #001      KIEROWNIK          12:15
+                10011441
+****************************************
+           NIP 527-23-80-769
+2015-04-15                          1200
+         N I E F I S K A L N Y
+- - - - - - - - - - - - - - - - - - - -
+      RAPORT KONFIGURACJI SPRZÊTU
+- - - - - - - - - - - - - - - - - - - -
+    Wyœwietlacz operatora / klienta
+Typ wyœwietlacza                LCD 20x4
+Jasnoœæ                               11
+Podœwietlenie                     Zawsze
+Kontrast                               6
+Czas zaniku podœwietlenia            100
+         Konfiguracja drukarki
+Jakoœæ wydruku                         2
+Impuls szuflady                        5
+Czas wylogowania                       0
+Czas wy³¹czenia                       15
+Obcinacz                            Brak
+DŸwiêki klawiatury                   TAK
+Oszczêdnoœæ papieru                  NIE
+Wydruki niefiskalne     Orygina³ + kopia
+- - - - - - - - - - - - - - - - - - - -
+         N I E F I S K A L N Y
+      #001      KIEROWNIK          14:39
+                10011441
+****************************************

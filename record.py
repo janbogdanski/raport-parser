@@ -55,10 +55,20 @@ class Record (object):
 
     @staticmethod
     def to_float(num):
+        """
+        convert US number style 1.191.991,17 to float
+        :param num:
+        :return:
+        """
         return round(float(num.replace('.', '').replace(',', '.').replace(' ', '')), 2)
 
     @staticmethod
     def round(num):
+        """
+        convert input to float and round
+        :param num:
+        :return:
+        """
         return round(float(num), 2)
 
     @staticmethod
