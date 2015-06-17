@@ -15,7 +15,6 @@ class ReportParser (object):
     args = {}
     def read_printer_report(self, files):
         rejestr = ""
-        print self.args.printer
 
         for filename in files:
             f = open(filename)
@@ -68,7 +67,7 @@ class ReportParser (object):
 
                 if not valid_date and doc_date:
                     converted_date = time.strptime(doc_date.group(1), PrinterRecord.DATE_FORMAT)
-                    if self.args.date and time.strftime("%m.%Y", converted_date) == self.args.date:
+                    if self.args["date"] and time.strftime("%m.%Y", converted_date) == self.args["date"]:
                         valid_date = True
 
                 # sprawdzenie czy na koncu linii jest cena np. 11,54A
@@ -109,7 +108,7 @@ class ReportParser (object):
                 print 'brak refNum na paragonie'
                 # print receipt
                 continue
-            if self.args.date and not valid_date:
+            if self.args["date"] and not valid_date:
                 print 'data spoza zakresu ' + refNum
                 continue
 
@@ -146,7 +145,7 @@ class ReportParser (object):
                         # check if document date if equal to passed
                         doc_date = str(line[SapRecord.POS_DOC_DATE].strip())
                         converted_date = time.strptime(doc_date, SapRecord.DATE_FORMAT)
-                        if self.args.date and time.strftime("%m.%Y", converted_date) != self.args.date:
+                        if self.args["date"] and time.strftime("%m.%Y", converted_date) != self.args["date"]:
                             continue
 
                         refNum = str(line[SapRecord.POS_REF_NO].strip())
@@ -207,7 +206,7 @@ class ReportParser (object):
         :type sap: list of SapRecord
         :return:
         """
-        f = open(self.args.out, 'wt')
+        f = open(self.args["out"], 'wt')
         output = csv.writer(f)
         output.writerow(('id', 'status', 'message', 'comment', 'tax code diff', 'tax diff', 'taxes by tax', 'tax sum'))
 

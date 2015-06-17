@@ -13,8 +13,8 @@ def main():
 
     p = report_parser.ReportParser()
     p.args = args
-    sap = p.read_sap_report2(args.sap)
-    printer = p.read_printer_report(args.printer)
+    sap = p.read_sap_report2(args["sap"])
+    printer = p.read_printer_report(args["printer"])
     p.compare_write_reports2(printer, sap)
     exit()
 
@@ -28,10 +28,11 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--out', default="output.txt", help="naza wyjsciowego csv", )
     parser.add_argument('-d', '--date', default="", help="miesiac i rok, do zawezenia parsowanych raportow"
                                                          " w formacie MM.RRRR, np. 05.2015", )
-    args = parser.parse_args()
+    args = vars(parser.parse_args())
     print(args)
-    print(args.sap)
-    print(args.printer)
-    print(args.out)
+    print(args["sap"])
+    print(args["printer"])
+    print(args["out"])
+
 
     main()
