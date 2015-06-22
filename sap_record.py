@@ -7,19 +7,31 @@ from record import Record
 class SapRecord (Record):
 
     # columns mappings
-    POS_TYPE_SUM = 1
-    POS_TYPE = 3
-    POS_DOC_NO = 5
-    POS_REF_NO = 11
-    POS_DOC_DATE = 16
-    POS_TAX_SYMBOL = 39
-    POS_TAX_RATE = 40
-    POS_GROSS = 41
-    POS_NET = 42
-    POS_TAX_VAL = 43
 
-    #sap report contains few lines on top, which should be skipped
-    FIRST_REPORT_LINE = 7
+    # row with asertisk in POS_TYPE_SUM column, contains sum for all rows for one type
+    # should be omitted
+    POS_TYPE_SUM = 0
+    POS_TYPE = 1
+    # POS_DOC_NO = 999
+
+    # DocumentNo in new SAP files
+    POS_REF_NO = 3
+    POS_DOC_DATE = 5
+
+    # Tx
+    POS_TAX_SYMBOL = 15
+    POS_TAX_RATE = 16
+    POS_GROSS = 17
+
+    # Tax base amount
+    POS_NET = 18
+
+    # Output Tax Pay.
+    POS_TAX_VAL = 19
+
+
+    # sap report contains few lines on top, which should be skipped
+    FIRST_REPORT_LINE = 8
 
     TYPE_EXPECTED = ("RV",) # "R1"
 
@@ -28,7 +40,8 @@ class SapRecord (Record):
 
     TAX_TECHNICAL_CODE = "YA"
 
-    DATE_FORMAT = "%d.%m.%Y"
+    # DATE_FORMAT = "%d.%m.%Y"
+    DATE_FORMAT = "%Y-%m-%d"
     type = ''
     taxRate = ''
     gross = ''
