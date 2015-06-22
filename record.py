@@ -60,7 +60,10 @@ class Record (object):
         :param num:
         :return:
         """
-        return round(float(num.replace('.', '').replace(',', '.').replace(' ', '')), 2)
+        if ',' in num:
+            return round(float(num.replace('.', '').replace(',', '.').replace(' ', '')), 2)
+        else:
+            return round(float(num.replace(' ', '')), 2)
 
     @staticmethod
     def round(num):
